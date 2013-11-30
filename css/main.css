@@ -1,0 +1,10 @@
+body {
+    padding-top:70px;
+    padding-bottom:70px;
+}
+.navbar-content,
+.content
+{
+    max-width:760px;
+    margin : auto;
+}

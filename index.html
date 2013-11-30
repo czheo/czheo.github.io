@@ -1,0 +1,10 @@
+---
+layout: default
+title: czheo
+---
+{% for post in site.posts %}
+<div class="row lead">
+<a class="span5" href="{{ post.url }}">{{ post.title }}</a>
+<span class="span2 muted"><small>{{ post.date | date:"%Y-%m-%d" }}</small></span>
+</div>
+{% endfor %}
