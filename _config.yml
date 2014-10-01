@@ -1,7 +1,9 @@
-name: czheo
-safe: true
-lsi: false
-pygments: true
-markdown: redcarpet
-redcarpet:
-    extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "tables", "with_toc_data"]
+# Site settings
+title: czheo
+description: "About technology, programming and me."
+baseurl: ""
+url: "http://czheo.github.io"
+
+# Build settings
+# markdown: kramdown
+permalink: pretty
