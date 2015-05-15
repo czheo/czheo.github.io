@@ -17,20 +17,28 @@ Array
 
 ~~~ruby
 a = ["a", "b", "c", "d", "e"]
-a[-1]  # => "e"   # this is syntactic sugar
+# this is just syntactic sugar
+a[-1]  # => "e"
+# accessing undefined array elements does not raise an error
 a[100]  # => nil
-a[1..3] # => ["b", "c", "d"]    # this is not syntactic sugar
+# this is not syntactic sugar. 0..1 is a Range, inclusively
+a[1..3] # => ["b", "c", "d"]
+# exclusive Range
 a[1...3] # => ["b", "c"]
 a[1..100] # => ["b", "c", "d", "e"]
+~~~
 
-# :[] is a method of Array
+~~~ ruby
+# :[] is just a method of Array
 [].methods.include?(:[])
-a.[] 1..3  # a[1..3]
+# this is equivalent to a[1..3]
+a.[] 1..3
 
 a = [1]
-a.push 1 # => [1,1]
-a.pop # => 1
-a # => [1]
+a.push 1
+# => [1,1]
+a.pop
+# => 1
 ~~~
 
 Hash
