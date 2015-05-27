@@ -5,5 +5,4 @@ baseurl: ""
 url: "http://czheo.github.io"
 
 # Build settings
-# markdown: kramdown
 permalink: pretty
