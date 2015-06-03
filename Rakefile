@@ -22,3 +22,23 @@ task :publish, :draft do |t, args|
         sh "rake -T"
     end
 end
+
+desc "create a draft"
+task :draft, :name do |t, args|
+    name = args[:name]
+    filename = name.downcase.gsub(/\s+/, "-") + ".md"
+    path = "_drafts/#{filename}"
+    template = %{---
+layout: post
+title: #{name}
+author: czheo
+---}
+    if File.exist? path
+        puts "#{path} already exists"
+    else
+        File.open(path, "w") do |file|
+            file.write(template)
+        end
+        puts "created #{path}"
+    end
+end
