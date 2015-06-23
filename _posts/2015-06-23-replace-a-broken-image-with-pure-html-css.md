@@ -48,4 +48,4 @@ With a good image:
 <img src="http://www.computerweekly.com/blogs/cwdn/2011/01/25/Human%20error.png" />
 </object>
 
-You can find some further discussino on [stackoverflow](http://stackoverflow.com/questions/10407236/is-it-valid-to-include-images-with-object-instead-of-img)
+You can find some further discussion on [stackoverflow](http://stackoverflow.com/questions/10407236/is-it-valid-to-include-images-with-object-instead-of-img)
