@@ -7,7 +7,7 @@ author: czheo
 On most browsers, a broken image icon will show up while failing to load the image. For example, 
 <img src="error.img" />
 
-Today I occasionally heard two of my colleagues talking about replace an image with another while failing to load the original one with Javascript. Most solutions you can find on the web is something like below.
+Today I occasionally heard two of my colleagues talking about replace an image with another while failing to load the original one with Javascript. Most solutions you can find on the web are something like below.
 
 ~~~ js
 document.getElementById("myImg").onerror = function() {
@@ -37,11 +37,13 @@ So I did some research and finally found an interesting solution.
 The effect looks as below.
 
 With a broken image:
+
 <object data="error.img">
 <img src="http://www.computerweekly.com/blogs/cwdn/2011/01/25/Human%20error.png" />
 </object>
 
 With a good image:
+
 <object data="http://upload.wikimedia.org/wikipedia/commons/1/1b/Square_200x200.png">
 <img src="http://www.computerweekly.com/blogs/cwdn/2011/01/25/Human%20error.png" />
 </object>
