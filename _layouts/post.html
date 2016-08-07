@@ -1,6 +1,11 @@
 ---
 layout: default
 ---
+<style type="text/css">
+.date {
+  color: grey;
+}
+</style>
 <div>
 <a href="/">Top Page</a>
 </div>
@@ -14,8 +19,8 @@ layout: default
 </div>
 <div>
     <h2>{{ page.title }}</h2>
+    <div class="date">{{ page.date | date:"%Y-%m-%d" }}</div>
     <div>
     {{ content }}
     </div>
-    <p>by {{ page.author }} @ {{ page.date | date:"%Y-%m-%d" }}</p>
 </div>
