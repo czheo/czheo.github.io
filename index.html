@@ -1,19 +1,64 @@
 ---
 layout: default
-title: czheo
+title: Zheyuan (Tony) Chen
 ---
-<h1>
-<a href="/">{{ site.title }}</a>
-</h1>
-<div>Subscribe via <a href="{{ "/feed.xml" | prepend: site.baseurl }}">RSS</a></div>
-{% for post in site.posts %}
-<div>
-<h3>
-<a href="{{ post.url }}">{{ post.title }}</a>
-<span><small>{{ post.date | date:"%Y-%m-%d" }}</small></span>
-</h3>
-<p>
-<span>{{ post.content | strip_html | truncatewords:10}}</span>
-</p>
+<style type="text/css">
+.left-side {
+  position: fixed;
+  width: 28%;
+}
+.right-side {
+  margin-left: 30%;
+}
+.title a{
+  color: black;
+  text-decoration: none;
+}
+.title .photo {
+  width: 60%;
+}
+.date {
+  color: grey;
+}
+</style>
+<div class="left-side">
+  <div class="title">
+  <img class="photo" src="https://media.licdn.com/mpr/mpr/shrinknp_400_400/AAEAAQAAAAAAAALMAAAAJGZhODQ5M2EzLTNmMGQtNGQzOC1iZjhkLTNmOWJhYjhjYjUwOQ.jpg" alt="photo">
+  <h2><a href="/">{{ site.title }}</a></h2>
+  </div>
+  <div>
+    <a href="https://github.com/czheo">Github</a>
+  </div>
+  <div class="rss">Subscribe via <a href="{{ "/feed.xml" | prepend: site.baseurl }}">RSS</a></div>
 </div>
-{% endfor %}
+<div class="right-side">
+  <div class="about_me">
+    <h2>About Me</h2>
+    <p>I am Zheyuan Chen. I was born in Zhejiang, China.</p>
+    <p>I majored in Urban Planning when I was at universities in Japan and China. However, to pursue my true self, I started my career as a software engineer at Yahoo Japan.</p>
+    <p>After living in Japan for about 7 years, recently I moved to beautiful California in the U.S. and started a new journey.</p>
+  </div>
+  <div class="project_list">
+    <h2>Projects</h2>
+    <h3>
+      <a href="https://github.com/czheo/node-chat">A toy chatroom</a>
+    </h3>
+    <h3>
+      <a href="https://github.com/czheo/peatio-client-python">A python client for Peatio</a>
+    </h3>
+    <h3>
+      <a href="https://www.youtube.com/watch?v=X0zL1vmKqug">A demo of Japanese architecture law visualization</a>
+    </h3>
+  </div>
+  <div class="post_list">
+    <h2>Articles</h2>
+    {% for post in site.posts %}
+    <div class="post">
+    <h3>
+    <span class="date"><small>{{ post.date | date:"%Y-%m-%d" }}</small></span>
+    <a href="{{ post.url }}">{{ post.title }}</a>
+    </h3>
+    </div>
+    {% endfor %}
+  </div>
+</div>
