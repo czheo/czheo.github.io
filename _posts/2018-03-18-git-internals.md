@@ -122,7 +122,7 @@ $ tree .git
 └── refs
 ~~~
 
-Now our `hello.txt` is **staged**. Two new files are created:
+Now our `hello.txt` is **staged**. Two new files are created under `.git/`:
 
 - The `index` file, as its name indicates, stores the index of what files are staged.
 - The `objects/8d/0e41234f24b6da002d962a26c2495ea16a425f` file stores the actual data of the staged file `hello.txt`.
@@ -514,3 +514,55 @@ My first commit
 ~~~
 
 Furthermore, notice git stores the new file `hello.txt` in `8ecb1fca678b22a883ceaa0655c0a104b8812b80` as its whole, instead of the change diff.
+
+## Git tag is "cheating"
+
+When we create a tag in git, it creates a new file under `.git/refs/tags/mytag`.
+
+~~~ bash
+$ git tag mytag
+$ tree .git
+.git
+...
+├── objects
+│   ├── 43
+│   │   └── 3869c28e75b1b9648b7c9cce7d8f1622d930eb
+│   ├── 58
+│   │   └── 452a586535b0e636d91e4d08007f93e70a6591
+│   ├── 78
+│   │   └── d0dae4323facf43ec1abb2974dc6aed63b65d7
+│   ├── 8d
+│   │   └── 0e41234f24b6da002d962a26c2495ea16a425f
+│   ├── 8e
+│   │   └── cb1fca678b22a883ceaa0655c0a104b8812b80
+│   └── c9
+│       └── cb777b785095f1d61ba213cbe95a2191f1b530
+└── refs
+    ├── heads
+    │   ├── master
+    │   └── newbr
+    └── tags
+        └── mytag
+~~~
+
+If we look at it, it's the same as files in `.git/refs/heads/`.
+
+~~~ bash
+$ cat .git/refs/tags/mytag
+c9cb777b785095f1d61ba213cbe95a2191f1b530
+~~~
+
+Therefore, we can tell git branches and tags have little difference internally, altough they seem to be quite different from the user's perspective.
+Both of them are merely pointers to some commit objects.
+
+The git command API makes tags appear immutable to the users, unlike branches. However, we are smart enough to mutate tags now.
+
+~~~ bash
+$ git show mytag
+commit c9cb777b785095f1d61ba213cbe95a2191f1b530
+...
+$ echo "433869c28e75b1b9648b7c9cce7d8f1622d930eb" > .git/refs/tags/mytag
+$ git show mytag
+commit 433869c28e75b1b9648b7c9cce7d8f1622d930eb
+...
+~~~
