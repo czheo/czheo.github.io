@@ -552,7 +552,7 @@ $ cat .git/refs/tags/mytag
 c9cb777b785095f1d61ba213cbe95a2191f1b530
 ~~~
 
-Therefore, we can tell git branches and tags have little difference internally, altough they seem to be quite different from the user's perspective.
+Therefore, we can tell git branches and tags have little difference internally, although they seem to be quite different from the user's perspective.
 Both of them are merely pointers to some commit objects.
 
 The git command API makes tags appear immutable to the users, unlike branches. However, we are smart enough to mutate tags now.
