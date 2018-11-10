@@ -7,12 +7,7 @@
   <meta name="description" content="{{ site.description }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet"
-        href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
-  <style type="text/css">
-    table { border-collapse: collapse; }
-    table, th, td { border: 1px solid black; }
-    td {text-align: right;padding: 5px;}
-  </style>
+        href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/zenburn.min.css">
   <style type="text/css">
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -22,16 +17,40 @@
       margin-bottom: 200px;
     }
   </style>
+  <style type="text/css">
+    /* for block of numbers */
+    td.hljs-ln-numbers {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+
+      text-align: center;
+      color: #ccc;
+      border-right: 1px solid #CCC;
+      vertical-align: top;
+      padding-right: 5px !important;
+    }
+
+    /* for block of code */
+    td.hljs-ln-code {
+      padding-left: 10px !important;
+    }
+  </style>
 </head>
 <body>
   <div class="wrapper">
   {{ content }}
   </div>
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.3.0/dist/highlightjs-line-numbers.min.js"></script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 <script>
 hljs.initHighlightingOnLoad();
+hljs.initLineNumbersOnLoad();
 </script>
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 <script>
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),

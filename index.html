@@ -15,24 +15,24 @@ title: Zheyuan Chen
   text-decoration: none;
 }
 .title .photo {
-  width: 60%;
+  max-width: 200px;
 }
 .date {
   color: grey;
 }
 </style>
 <div class="left-side">
-  <div class="title">
-  <img class="photo" src="https://github.com/czheo.png" alt="photo">
-  <h2><a href="/">{{ site.title }}</a></h2>
-  </div>
-  <div>
-    <a href="https://github.com/czheo">Github</a>
-    <a href="https://twitter.com/czheo">Twitter</a>
-  </div>
-  <div class="rss">Subscribe via <a href="{{ "/feed.xml" | prepend: site.baseurl }}">RSS</a></div>
 </div>
 <div class="right-side">
+  <div class="title">
+    <img class="photo" src="https://github.com/czheo.png" alt="photo">
+    <h2><a href="/">{{ site.title }}</a></h2>
+  </div>
+  <div class="links">
+    <a href="https://github.com/czheo">Github</a>
+    <a href="https://twitter.com/czheo">Twitter</a>
+    <div class="rss">Subscribe via <a href="{{ "/feed.xml" | prepend: site.baseurl }}">RSS</a></div>
+  </div>
   <div class="post_list">
     {% for post in site.posts %}
     <div class="post">
