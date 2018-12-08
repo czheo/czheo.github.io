@@ -222,7 +222,7 @@ while B do
 到目前为止，我们讨论的所有程序都没有死循环的危险。而要证明循环结构程序的**完全正确性（total correctness）**，我们需要证明程序的两个性质：
 
 - 循环可终止（termination）。
-- 循环局部正确性（partial correctness）。这个提法很费解，它实际的意思是指“如果循环最终能终止，那么这支程序会满足一定的条件”。
+- 循环部分正确性（partial correctness）。这个提法很费解，它实际的意思是指“如果循环最终能终止，那么这支程序会满足一定的条件”。
 
 ### 证明Partial Correctness
 
