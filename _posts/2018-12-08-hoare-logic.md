@@ -199,7 +199,7 @@ B,   {P && B} S1 {Q}
 {P} if B then S1 else S2 {Q}
 
 
-!B,  {P && B!} S2 {Q}
+!B,  {P && !B} S2 {Q}
 ----------------------------
 {P} if B then S1 else S2 {Q}
 ~~~
