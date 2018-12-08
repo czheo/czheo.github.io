@@ -22,7 +22,7 @@ Hoare Logic的核心思路是：任何一支“简单”的程序，都是由三
 Hoare Logic的基本语法由三个部分组成：
 
 1. **前置条件（Precondition）**是程序执行前满足的状态。
-2. 一支“不会死循环”可正确执行的程序。（不抛出Exception）
+2. 一支“不会死循环”可正确执行的程序。（不提前return、break或者抛出Exception）
 3. **后置条件（Postcondition）**是程序执行后满足的状态。
 
 它满足如下格式：P代表Precondition，Q代表Postcondition，S是程序。
@@ -236,6 +236,8 @@ while B do
 ~~~
 
 从式子里，我们可以观察到，invariant不但在while-do整支程序执行的前后都是成立的，而且在循环内部的`S`的执行前后也都成立。即**invairant是在整个循环执行过程中不变的性质**。
+另外，作为`S`的Precondition，`B`必须满足，不然循环内的代码怎么会运行呢？
+而且，作为整个循环的Postcondition，`!B`必须满足，不然循环怎么会结束呢？
 
 从一个简单的例子来看，下面这个循环对1到10的整数求和。
 
