@@ -18,3 +18,5 @@ Then, if $$\vert V \vert$$ is odd, $$\vert V_e \vert$$ must be odd.
 After removing a vertex, $$\vert V' \vert$$ becomes even and $$\vert V_e' \vert$$ must be even.
 If $$\vert V \vert$$ is even, similar reasoning also holds.
 (End of Proof)
+
+Another way of rephrasing this lemma will be: **the parity of the number of even-degree vertices is the same as the the parity of the number of vertices.**
