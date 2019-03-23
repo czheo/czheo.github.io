@@ -3,8 +3,9 @@ layout: post
 title: Why numbering should start at zero
 author: czheo
 ---
+(03/23/2019 Update: 发现Guido也写过类似的文章解释[为什么Python的下标从0开始](http://python-history.blogspot.com/2013/10/why-python-uses-0-based-indexing.html)，基本照搬了Dijkstra的观点。)
 
-著名的计算机科学家Dijkstra在[1982年的手稿中](https://www.cs.utexas.edu/users/EWD/transcriptions/EWD08xx/EWD831.html)简要讨论了“为什么数字下标要从0开始”这个问题。
+著名程序员Dijkstra在[1982年的手稿中](https://www.cs.utexas.edu/users/EWD/transcriptions/EWD08xx/EWD831.html)简要讨论了“为什么数字下标要从0开始”这个问题。
 
 首先，他讨论了表示范围的最佳形式。
 比如表示自然数序列2，3，···，12，有四种方法：
