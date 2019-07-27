@@ -3,6 +3,15 @@ layout: default
 title: Zheyuan Chen
 ---
 <style type="text/css">
+.head {
+  height: 200px;
+  position: relative;
+}
+.head .links {
+  position: absolute;
+  top: 80px;
+  left: 220px;
+}
 .title a{
   color: black;
   text-decoration: none;
@@ -13,11 +22,14 @@ title: Zheyuan Chen
 </style>
 <div class="head">
   <img class="photo" src="https://github.com/czheo.png" alt="photo">
-  <h2 class="title"><a href="/">{{ site.title }}</a></h2>
-  <a href="https://github.com/czheo">Github</a>
-  <a href="https://twitter.com/czheo">Twitter</a>
-  <div class="rss">[ Subscribe via <a href="{{ "/feed.xml" | prepend: site.baseurl }}">RSS</a> ]</div>
+  <div class="links">
+    <h2 class="title"><a href="/">{{ site.title }}</a></h2>
+    <a href="https://github.com/czheo">Github</a>
+    <a href="https://twitter.com/czheo">Twitter</a>
+    <div class="rss">[ Subscribe via <a href="{{ "/feed.xml" | prepend: site.baseurl }}">RSS</a> ]</div>
+  </div>
 </div>
+<h2>Posts</h2>
 <div class="post_list">
   {% for post in site.posts %}
   <div class="post">
