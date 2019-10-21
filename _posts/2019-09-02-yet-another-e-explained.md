@@ -2,6 +2,8 @@
 layout: post
 title: Yet Another e Explained
 author: czheo
+categories:
+  - math
 ---
 ## 不尽人意的例子
 虽然有不少关于自然常数e的解释，浏览下来不少都从复利计算的例子展开。

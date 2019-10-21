@@ -6,3 +6,7 @@ url: "https://czheo.github.io"
 
 # Build settings
 permalink: pretty
+
+collections:
+  category:
+    output: true

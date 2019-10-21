@@ -29,6 +29,12 @@ title: Zheyuan Chen
     <div class="rss">[ Subscribe via <a href="{{ "/feed.xml" | prepend: site.baseurl }}">RSS</a> ]</div>
   </div>
 </div>
+<div class="category">
+|  
+{% for cat in site.categories %}
+  <a href="/category/{{cat[0]}}">{{ cat[0] | capitalize }}</a> |
+{% endfor %}
+</div>
 <h2>Posts</h2>
 <div class="post_list">
   {% for post in site.posts %}

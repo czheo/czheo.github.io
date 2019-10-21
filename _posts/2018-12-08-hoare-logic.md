@@ -2,6 +2,8 @@
 layout: post
 title: 简明Hoare Logic
 author: czheo
+categories:
+  - tech
 ---
 
 TDD是工程上最常见的避免写bug的方法，然而TDD只能通过有限个test case覆盖无穷的解空间里若干个离散的点，逻辑证明却能覆盖整个解空间的正确性。

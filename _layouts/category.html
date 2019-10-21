@@ -1,0 +1,14 @@
+---
+layout: default
+---
+{% include nav_list.html %}
+<div class="post_list">
+{% for post in site.categories[page.name] %}
+  <div class="post">
+    <h3>
+    <span class="date"><small>{{ post.date | date:"%Y-%m-%d" }}</small></span>
+    <a href="{{ post.url }}">{{ post.title }}</a>
+    </h3>
+  </div>
+{% endfor %}
+</div>

@@ -9,10 +9,8 @@ code {
   font-size: 85%;
 }
 </style>
+{% include nav_list.html %}
 <div class='post'>
-<div>
-<a href="/">Top Page</a>
-</div>
 <div>
     {% if page.previous.url %}
     Previous: <a href="{{ page.previous.url }}">{{ page.previous.title }}</a>

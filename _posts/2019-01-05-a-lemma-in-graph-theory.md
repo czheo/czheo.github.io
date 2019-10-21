@@ -2,6 +2,8 @@
 layout: post
 title: A Lemma in Graph Theory
 author: czheo
+categories:
+  - math
 ---
 
 When solving a puzzle, I found the following lemma:

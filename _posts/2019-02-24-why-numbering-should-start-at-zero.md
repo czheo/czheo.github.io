@@ -2,6 +2,8 @@
 layout: post
 title: Why numbering should start at zero
 author: czheo
+categories:
+  - tech
 ---
 (03/23/2019 Update: 发现Guido也写过类似的文章解释[为什么Python的下标从0开始](http://python-history.blogspot.com/2013/10/why-python-uses-0-based-indexing.html)，基本照搬了Dijkstra的观点。)
 

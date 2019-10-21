@@ -2,6 +2,8 @@
 layout: post
 title: Drawing Balls from a Bag
 author: czheo
+categories:
+  - math
 ---
 
 There is a puzzle being asked in my company mailing list:

@@ -1,0 +1,10 @@
+<div class="category">
+| <a href="/">TOP</a> |
+{% for cat in site.categories %}
+  {% if page.name == cat[0] %}
+  <b>{{ cat[0] | capitalize }}</b> |
+  {% else %}
+  <a href="/category/{{cat[0]}}">{{ cat[0] | capitalize}}</a> |
+  {% endif %}
+{% endfor %}
+</div>

@@ -2,6 +2,8 @@
 layout: post
 title: One-liner curry decorator in Python
 author: czheo
+categories:
+  - tech
 ---
 
 I discovered the following trick.
