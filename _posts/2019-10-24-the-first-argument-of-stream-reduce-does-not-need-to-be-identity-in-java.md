@@ -62,7 +62,7 @@ I strongly believe not, and the associativity of `BinaryOperator` alone should b
 
 Given an expression `A op B op C op D` where `op` is the binary operator, associativity guarantees that its evaluation is equivalent to `(A op B) op (C op D)`, such that we would be able to evaluate `A op B` and `C op D` in parallel and combine their results afterward.
 The only reason I can think of why Java requires identity here is that the language developers wanted to simplify the implementation and keep all sub jobs symmetric.
-Otherwise, they may have needed to differentiate parallelized jobs with/without initial values.
+Otherwise, they may have had to differentiate parallelized jobs with/without initial values.
 
 My gut feeling tells me that there must exist a simple implementation that does not require the initial value to be an identity.
 So I tried to write a "parallel reduce" `pareduce` function in Haskell as a proof of concept (with my limited Haskell proficiency).
