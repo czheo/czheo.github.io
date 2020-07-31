@@ -18,4 +18,4 @@ Meanwhile, Luke is not just his English name, but also the alphabet spelling of 
 This character also has the same pronunciation as "Six"(陆) of the Chinese capital number character, for he was born on June 6 (06/06) of Chinese Lunar Calendar.
 (Six is also considered to be the lucky number in China, similar to 7 in the western culture.)
 
-"珂" means "pure white jade-like stone", with the wish of being a bright person of him, similar to the meaning of the Latin origin of his English name.
+"珂" means "pure white jade-like stone", with our wish of being a bright person of him, similar to the meaning of the Latin origin of his English name.
