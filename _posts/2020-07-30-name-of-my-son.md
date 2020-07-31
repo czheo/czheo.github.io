@@ -4,7 +4,7 @@ title: Name of my son
 author: czheo
 ---
 
-Our newborn son just arrived in the early morning on July 26th, Sunday.
+Our newborn son just arrived in the early morning on July 26, Sunday.
 My wife and I decided to name him "Luke".
 
 According to [Wikipedia](https://en.wikipedia.org/wiki/Luke_(name)),
