@@ -16,6 +16,6 @@ Meanwhile, Luke is not just his English name, but also the alphabet spelling of 
 
 "麓" means "foothill", for he was born in Mountain View, the city located at the foothill of the Santa Cruz Mountains.
 This character also has the same pronunciation as "Six"(陆) of the Chinese capital number character, for he was born on June 6 (06/06) of Chinese Lunar Calendar.
-(Six is also considered to be the lucky number in China, similar to 7 in the western world.)
+(Six is also considered to be the lucky number in China, similar to 7 in the western culture.)
 
 "珂" means "pure white jade-like stone", with the wish of being a bright person of him, similar to the meaning of the Latin origin of his English name.
