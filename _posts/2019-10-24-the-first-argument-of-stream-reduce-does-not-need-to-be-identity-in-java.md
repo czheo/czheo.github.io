@@ -3,7 +3,7 @@ layout: post
 title: The first argument of Stream::reduce does not need to be an identity in Java
 author: czheo
 categories:
-    - tech
+    - code
 ---
 
 [The official documentation of Java](https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html#reduce-T-java.util.function.BinaryOperator-) claims that the first argument of `T Stream::reduce(T identity, BinaryOperator<T> accumulator)` must be an identity.

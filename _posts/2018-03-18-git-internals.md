@@ -3,7 +3,7 @@ layout: post
 title: Git Internals
 author: czheo
 categories:
-  - tech
+  - code
 ---
 
 We will create a git repository named `git_internals` from scratch with minimal use of conventional git commands. I use git version `2.8.1`.

@@ -3,7 +3,7 @@ layout: post
 title: One-liner curry decorator in Python
 author: czheo
 categories:
-  - tech
+  - code
 ---
 
 I discovered the following trick.

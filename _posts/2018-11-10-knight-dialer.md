@@ -3,7 +3,7 @@ layout: post
 title: Knight Dialer
 author: czheo
 categories:
-  - tech
+  - code
 ---
 
 Below is my solution to [Leetcode Problem 935](https://leetcode.com/problems/knight-dialer/description/).
