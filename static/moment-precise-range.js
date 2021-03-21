@@ -1,11 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Luke</title>
-<script type="text/javascript" src="/static/moment.min.js"></script>
-<script type="text/javascript" src="/static/moment-precise-range.js"></script>
-<script type="text/javascript">
+if (typeof moment === "undefined" && typeof require === 'function') {
+    var moment = require('moment');
+}
+
 (function(moment) {
     var STRINGS = {
         nodiff: '',
@@ -131,52 +127,3 @@
 
     };
 }(moment));
-</script>
-<script type="text/javascript">
-function setHtml(id, content) {
-  document.getElementById(id).innerHTML = content;
-}
-function update(since) {
-  var now = moment();
-  setHtml('duration', moment.preciseDiff(since, now));
-  setTimeout(function() {
-    update(since);
-  }, 500);
-}
-window.onload = function() {
-  var birthday = moment.parseZone("2020-07-26T04:29:00.000-07:00");
-  setHtml('last-login', birthday);
-  update(birthday);
-}
-</script>
-<style type="text/css">
-html, body {
-  height: 100%;
-  margin: 0;
-}
-#term {
-  color: green;
-  font-size: 1.5em;
-  background-color: black;
-  font-family: Lucida Console, Courier, monospace;
-  height: 100%;
-}
-#term > .line {
-  padding: 2px;
-}
-</style>
-</head>
-<body>
-<div id='term'>
-<div class='line'>
-Last login: <span id='last-login'></span> from 192.0.2.0
-</div>
-<div class='line'>
-Luke> uptime
-</div>
-<div class="line">
-<span id='duration'></span>
-</div>
-</div>
-</body>
-</html>
