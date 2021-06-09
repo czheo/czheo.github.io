@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Live Bird Wathcing</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+window.onload = function() {
+  var video = document.getElementById('video');
+  var videoSrc = 'http://143.110.144.81:8080/hls/stream.m3u8';
+  if (Hls.isSupported()) {
+    var hls = new Hls();
+    hls.loadSource(videoSrc);
+    hls.attachMedia(video);
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = videoSrc;
+  }
+};
+</script> 
+</head>
+<body>
+<video id="video" width="80%" controls autoplay muted></video>
+</body>
+</html>
