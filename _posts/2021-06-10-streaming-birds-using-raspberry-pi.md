@@ -21,7 +21,7 @@ author: czheo
 
 可是好景不长，傍晚时分我再去看时，地上树枝散落一地，还有一个碎掉的鸟蛋。
 鸟巢还没造好，就失去一个未出世的孩子，想必非常可怜。
-晚上，雌鸟在那里一动不动的趴了一夜。
+晚上，雌鸟在那里一动不动地趴了一夜。
 
 ![broken egg](/static/img/broken_egg.jpg)
 
@@ -30,7 +30,7 @@ author: czheo
 不过趁它们不在，我又稍微加固了平台。
 把原先三面围合的平台，做成了四面围合，希望这样鸟蛋不要再掉下来了。
 
-几天下来，我和家人都非常牵动这两只小鸟，希望它们能在阳台住下，抚育后代。
+几天下来，我和家人都非常牵挂这两只小鸟，希望它们能在阳台住下，抚育后代。
 于是，我腾出手头的一台Raspberry Pi，搭设了一个观鸟的直播流，来更好地近距离观察它们的动静。
 
 ![raspberry](/static/img/rpi.jpg)
@@ -41,5 +41,5 @@ author: czheo
 附录. 直播耗材：
 
 1. Raspberry Pi 3B+ with Camera Module。用ffmpeg推送摄像头信号给Nginx。
-2. 特地买了个6刀的DigitalOcean服务器，装上Nginx + rtmp-module，用来接收Raspberry Pi的视屏信号，并作为直播服务器推送给最终客户端。
+2. 特地买了个6刀的DigitalOcean服务器，装上Nginx + rtmp-module，用来接收Raspberry Pi的视频信号，并作为直播服务器推送给最终客户端。
 3. 在Github Page上添加了一个[新页面](http://czheo.github.io/bird)，用hls.js做客户端直播。
