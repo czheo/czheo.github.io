@@ -29,9 +29,9 @@ Stream.of(new Duck(), new Whale()).forEach(obj -> {
 Ideally, we want to define a common interface with a `swim()` method, and let `Duck` and `Whale` both implement it. But since this is an external library, we cannot modify the definitions. Instead, we can use a pattern like below to achieve duck typing.
 
 ``` java
-interface SwimAware {
-  static SwimAware coerce(Duck duck) {
-    return new SwimAware() {
+interface CanSwim {
+  static CanSwim coerce(Duck duck) {
+    return new CanSwim() {
       @Override
       public void swim() {
         duck.swim();
@@ -39,8 +39,8 @@ interface SwimAware {
     };
   }
 
-  static SwimAware coerce(Whale whale) {
-    return new SwimAware() {
+  static CanSwim coerce(Whale whale) {
+    return new CanSwim() {
       @Override
       public void swim() {
         whale.swim();
@@ -52,10 +52,10 @@ interface SwimAware {
 }
 ```
 
-Usage of `SwimAware`
+Usage of `CanSwim`
 
 ``` java
-Stream.of(SwimAware.coerce(new Duck()), SwimAware.coerce(new Whale())).forEach(obj -> {
-  obj.swim(); // obj is a SwimAware now, which has the swim() method
+Stream.of(CanSwim.coerce(new Duck()), CanSwim.coerce(new Whale())).forEach(obj -> {
+  obj.swim(); // obj is a CanSwim now, which has the swim() method
 });
 ```
