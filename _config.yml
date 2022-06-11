@@ -11,4 +11,4 @@ collections:
   category:
     output: true
 
-include: [".well-known/brave-rewards-verification.txt"]
+include: [".well-known"]
