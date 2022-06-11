@@ -1,0 +1,4 @@
+This is a Brave Rewards publisher verification file.
+
+Domain: czheo.github.io
+Token: 3a855bb08f50c76bac529876788da7bada03743de9dd1539502a2912a404a9a5
