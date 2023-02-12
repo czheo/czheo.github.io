@@ -137,7 +137,7 @@ When `fork()` is called during iteration 1, the buffer array is copied to the ch
 So when the child prints, the line will be appended to the buffer and eventually get flushed containing the output previously printed by the parent.
 
 Here is the detailed sequence of events producing `test.output`.
-1. After the first `fork()`, the parent process 48230 buffer will print `iteration 0: parent pid: 48230\n` and hold it in its buffer.
+1. After the first `fork()`, the parent process 48230 will print `iteration 0: parent pid: 48230\n` and hold it in its buffer.
 The child process 48231 will print `iteration 0: child pid = 48231, forked by 48230\n` and hold it in its own buffer.
 2. After the second `fork()`, child 48232 will be created by 48230, which copies 48230's buffer first and prints `iteration 1: child pid = 48232, forked by 48230\n`. At this point, 48232's buffer contains `iteration 0: parent pid: 48230\niteration 1: child pid = 48232, forked by 48230\n`. At the end of this process, the buffer is flushed and produces line 1 and line 2 as we see in `test.output`.
 3. Similarly, line 3 and line 4 are produced by process 48233, where line 3 has been copied from its parent process 48231.
