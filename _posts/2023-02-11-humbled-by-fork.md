@@ -145,4 +145,4 @@ The child process 48231 will print `iteration 0: child pid = 48231, forked by 48
 
 As another experiment, if you add `fflush(stdout);` after each `printf(...);`, the output file will have 6 lines just like printing directly in the terminal.
 
-Imagining what other data that we can accidently copy during fork that we may be fully unaware of, I'm so humbled now.
+Imagining what other data that we can accidently copy during fork that we are fully unaware of and the side effects they can possibly cause, I'm so humbled now.
