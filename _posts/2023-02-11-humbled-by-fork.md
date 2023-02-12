@@ -125,9 +125,9 @@ What has caused this behavior is that the child has copied the `stdout` buffer o
 
 What is buffer?
 You may think of it as just a limited size in-memory array that holds the characters before writing to `stdout`.
-To reduce the syscalls and IO operations, instead of writing to `stdout` every time there is a character, the buffer will hold the characters up for a while until it reallyreally needs flushed out to `stdout`.
+To reduce the syscalls and IO operations, instead of writing to `stdout` every time a new character arrives, the buffer will hold the characters up for a while until it really needs flushed out to `stdout`.
 
-There is 2 modes of buffering: line buffering and full buffering.
+There are 2 buffering modes: line buffering and full buffering.
 
 - Line buffering will flush every time when there is a newline character. Terminal uses this mode, which is what we observed when running `./test` directly.
 - Full buffering will flush when the buffer reaches its size limit, which is what we observed when piping to `wc -l` or redirecting to a file.
