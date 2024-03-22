@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Math Book</title>
-        <meta name="robots" content="noindex">
+        <title>Naive Set Theory - Math Book</title>
 
 
         <!-- Custom HTML head -->
@@ -91,7 +90,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="logic.html"><strong aria-hidden="true">1.</strong> Logic</a></li><li class="chapter-item expanded "><a href="set.html"><strong aria-hidden="true">2.</strong> Naive Set Theory</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="logic.html"><strong aria-hidden="true">1.</strong> Logic</a></li><li class="chapter-item expanded "><a href="set.html" class="active"><strong aria-hidden="true">2.</strong> Naive Set Theory</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -176,121 +175,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="logic"><a class="header" href="#logic">Logic</a></h1>
-<h2 id="boolean"><a class="header" href="#boolean">Boolean</a></h2>
-<p>There are only 2 values of Boolean type - true (T) and false (F).</p>
-<pre><code class="language-hs">&gt;&gt;&gt; True
-&gt;&gt;&gt; False
-</code></pre>
-<h3 id="boolean-operations"><a class="header" href="#boolean-operations">Boolean operations</a></h3>
-<p>Logical And is represented as \( \land \) in math.</p>
-<div class="table-wrapper"><table><thead><tr><th>\(a\)</th><th>\(b\)</th><th>\(a \land b\)</th></tr></thead><tbody>
-<tr><td>T</td><td>T</td><td>T</td></tr>
-<tr><td>T</td><td>F</td><td>F</td></tr>
-<tr><td>F</td><td>T</td><td>F</td></tr>
-<tr><td>F</td><td>F</td><td>F</td></tr>
-</tbody></table>
-</div>
-<pre><code class="language-hs">&gt;&gt;&gt; a = True
-&gt;&gt;&gt; b = False
-&gt;&gt;&gt; a &amp;&amp; b
-False
-</code></pre>
-<p>Other boolean operations include Or (\(\lor\)), Not (\(\neg\)), Imply (\(\implies\)) and etc.</p>
-<p>Truth table of Logical Or:</p>
-<div class="table-wrapper"><table><thead><tr><th>\(a\)</th><th>\(b\)</th><th>\(a \lor b\)</th></tr></thead><tbody>
-<tr><td>T</td><td>T</td><td>T</td></tr>
-<tr><td>T</td><td>F</td><td>T</td></tr>
-<tr><td>F</td><td>T</td><td>T</td></tr>
-<tr><td>F</td><td>F</td><td>F</td></tr>
-</tbody></table>
-</div>
-<pre><code class="language-hs">&gt;&gt;&gt; a = True
-&gt;&gt;&gt; b = False
-&gt;&gt;&gt; a || b
-True
-</code></pre>
-<p>Truth table of Logical Not:</p>
-<div class="table-wrapper"><table><thead><tr><th>\(a\)</th><th>\(\neg a\)</th></tr></thead><tbody>
-<tr><td>T</td><td>F</td></tr>
-<tr><td>F</td><td>T</td></tr>
-</tbody></table>
-</div>
-<pre><code class="language-hs">&gt;&gt;&gt; a = True
-&gt;&gt;&gt; not a
-False
-</code></pre>
-<p>Truth table of Logical Imply:</p>
-<div class="table-wrapper"><table><thead><tr><th>\(a\)</th><th>\(b\)</th><th>\(a \implies b\)</th></tr></thead><tbody>
-<tr><td>T</td><td>T</td><td>T</td></tr>
-<tr><td>T</td><td>F</td><td>F</td></tr>
-<tr><td>F</td><td>T</td><td>T</td></tr>
-<tr><td>F</td><td>F</td><td>T</td></tr>
-</tbody></table>
-</div>
-<p>Let's define Imply (<code>==&gt;</code>) in Haskell.</p>
-<pre><code class="language-hs">(==&gt;) :: Bool -&gt; Bool -&gt; Bool
-True ==&gt; False = False
-_ ==&gt; _ = True
-
-&gt;&gt;&gt; a = True
-&gt;&gt;&gt; b = False
-&gt;&gt;&gt; a ==&gt; b
-False
-</code></pre>
-<h2 id="first-order-logic"><a class="header" href="#first-order-logic">First order logic</a></h2>
-<p>A predicate (P) is a function that takes some variables as input and produces a Boolean as output.
-e.g. \(P(x)\).</p>
-<p>Example:</p>
-<pre><code class="language-hs">&gt;&gt;&gt; isEven a = a `mod` 2 == 0
-&gt;&gt;&gt; isEven 3
-False
-</code></pre>
-<p>Here, <code>isEven</code> is a predicate that checks whether its input variable <code>a</code> is an even number.</p>
-<h3 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h3>
-<p>Forall (\(\forall\)) and Exists (\(\exists\)) are called Quantifiers in Firsr Order Logic.</p>
-<p>Forall quantifies variables and make statements about ALL elements in a domain (D).
-Its general form looks like \((\forall x \in D)\ P(x)\).</p>
-<pre><code class="language-hs">&gt;&gt;&gt; forall = flip all
-&gt;&gt;&gt; d = [32, 0, 14]
-&gt;&gt;&gt; forall d isEven
-True
-</code></pre>
-<p>Exists quantifies variables and make statements about SOME elements in a domain (D).
-Its general form looks like \((\exists x \in D)\ P(x)\).</p>
-<pre><code class="language-hs">&gt;&gt;&gt; exists = flip any
-&gt;&gt;&gt; d = [1, 32, 7]
-&gt;&gt;&gt; exists d isEven
-True
-</code></pre>
-<p>Sometimes when the domain is obvious, mathematicians omit it.
-\((\exists x)\ P(x)\).</p>
-<p>Math notations are ambiguous and can be sometimes confusing.
-For example, can you tell the difference of what the 2 notations mean?</p>
-<ol>
-<li>\((\forall a) (\exists b)\ b = 2a\)</li>
-<li>\((\exists b) (\forall a)\ b = 2a\)</li>
-</ol>
-<p>Assume that we discuss in the domain of integers \(\mathbb{Z}\).</p>
-<ol>
-<li>means for any integer (a), there exists an other integer (b) who is 2 times as large as it.
-This is a true statement.</li>
-<li>means there exists an integer (b), who is simultaneously 2 times as large as all other integers.
-This is non-sense.</li>
-</ol>
-<p>Haskell can express those properties,
-but not powerful enough to verify them in the domain of infinite sets.
-For example, the first notation can be written as below.</p>
-<pre><code class="language-hs">&gt;&gt;&gt; ints = 0 : [m | n &lt;- [1..], m &lt;- [n, -n]]
-&gt;&gt;&gt; forall ints (\a -&gt; exists ints (\b -&gt; b == 2*a))
--- the expression above never terminates
-</code></pre>
-<p>If the domain is a finite set, we may be able to evaluate the expression.</p>
-<pre><code class="language-hs">&gt;&gt;&gt; s = [1, 3, 5]
-&gt;&gt;&gt; forall s (\a -&gt; exists ints (\b -&gt; b == 2*a))
-True
-</code></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="naive-set-theory"><a class="header" href="#naive-set-theory">Naive Set Theory</a></h1>
+                        <h1 id="naive-set-theory"><a class="header" href="#naive-set-theory">Naive Set Theory</a></h1>
 <h2 id="set"><a class="header" href="#set">Set</a></h2>
 <p>Set formalizes the idea of "collection of objects".
 A simple way to denote a set is listing all elements in it.
@@ -372,6 +257,9 @@ sizeof = length . uniq
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="logic.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
 
                         <div style="clear: both"></div>
@@ -380,6 +268,9 @@ sizeof = length . uniq
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="logic.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
             </nav>
 
@@ -419,13 +310,6 @@ sizeof = length . uniq
 
         <!-- Custom JS scripts -->
 
-        <script>
-        window.addEventListener('load', function() {
-            MathJax.Hub.Register.StartupHook('End', function() {
-                window.setTimeout(window.print, 100);
-            });
-        });
-        </script>
 
     </div>
     </body>

@@ -90,7 +90,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="logic.html" class="active"><strong aria-hidden="true">1.</strong> Logic</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="logic.html" class="active"><strong aria-hidden="true">1.</strong> Logic</a></li><li class="chapter-item expanded "><a href="set.html"><strong aria-hidden="true">2.</strong> Naive Set Theory</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -237,12 +237,67 @@ _ ==&gt; _ = True
 &gt;&gt;&gt; a ==&gt; b
 False
 </code></pre>
+<h2 id="first-order-logic"><a class="header" href="#first-order-logic">First order logic</a></h2>
+<p>A predicate (P) is a function that takes some variables as input and produces a Boolean as output.
+e.g. \(P(x)\).</p>
+<p>Example:</p>
+<pre><code class="language-hs">&gt;&gt;&gt; isEven a = a `mod` 2 == 0
+&gt;&gt;&gt; isEven 3
+False
+</code></pre>
+<p>Here, <code>isEven</code> is a predicate that checks whether its input variable <code>a</code> is an even number.</p>
+<h3 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h3>
+<p>Forall (\(\forall\)) and Exists (\(\exists\)) are called Quantifiers in Firsr Order Logic.</p>
+<p>Forall quantifies variables and make statements about ALL elements in a domain (D).
+Its general form looks like \((\forall x \in D)\ P(x)\).</p>
+<pre><code class="language-hs">&gt;&gt;&gt; forall = flip all
+&gt;&gt;&gt; d = [32, 0, 14]
+&gt;&gt;&gt; forall d isEven
+True
+</code></pre>
+<p>Exists quantifies variables and make statements about SOME elements in a domain (D).
+Its general form looks like \((\exists x \in D)\ P(x)\).</p>
+<pre><code class="language-hs">&gt;&gt;&gt; exists = flip any
+&gt;&gt;&gt; d = [1, 32, 7]
+&gt;&gt;&gt; exists d isEven
+True
+</code></pre>
+<p>Sometimes when the domain is obvious, mathematicians omit it.
+\((\exists x)\ P(x)\).</p>
+<p>Math notations are ambiguous and can be sometimes confusing.
+For example, can you tell the difference of what the 2 notations mean?</p>
+<ol>
+<li>\((\forall a) (\exists b)\ b = 2a\)</li>
+<li>\((\exists b) (\forall a)\ b = 2a\)</li>
+</ol>
+<p>Assume that we discuss in the domain of integers \(\mathbb{Z}\).</p>
+<ol>
+<li>means for any integer (a), there exists an other integer (b) who is 2 times as large as it.
+This is a true statement.</li>
+<li>means there exists an integer (b), who is simultaneously 2 times as large as all other integers.
+This is non-sense.</li>
+</ol>
+<p>Haskell can express those properties,
+but not powerful enough to verify them in the domain of infinite sets.
+For example, the first notation can be written as below.</p>
+<pre><code class="language-hs">&gt;&gt;&gt; ints = 0 : [m | n &lt;- [1..], m &lt;- [n, -n]]
+&gt;&gt;&gt; forall ints (\a -&gt; exists ints (\b -&gt; b == 2*a))
+-- the expression above never terminates
+</code></pre>
+<p>If the domain is a finite set, we may be able to evaluate the expression.</p>
+<pre><code class="language-hs">&gt;&gt;&gt; s = [1, 3, 5]
+&gt;&gt;&gt; forall s (\a -&gt; exists ints (\b -&gt; b == 2*a))
+True
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
 
+                            <a rel="next prefetch" href="set.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -251,6 +306,9 @@ False
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
 
+                    <a rel="next prefetch" href="set.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
