@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathcraft: Diamond Quest</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #1a1a1a;
+            overflow-x: hidden;
+            user-select: none;
+        }
+        
+        /* Minecraft UI Patterns */
+        .mc-btn {
+            background-color: #7d7d7d;
+            border: 4px solid #000;
+            border-top-color: #c6c6c6;
+            border-left-color: #c6c6c6;
+            border-right-color: #555;
+            border-bottom-color: #555;
+            box-shadow: inset 2px 2px 0px #9e9e9e;
+            color: #fff;
+            text-shadow: 2px 2px #000;
+            cursor: pointer;
+        }
+        .mc-btn:active {
+            border-top-color: #555;
+            border-left-color: #555;
+            border-right-color: #c6c6c6;
+            border-bottom-color: #c6c6c6;
+            box-shadow: inset 2px 2px 0px #333;
+        }
+
+        .mc-panel {
+            background-color: #c6c6c6;
+            border: 4px solid #000;
+            border-top-color: #fff;
+            border-left-color: #fff;
+            border-right-color: #555;
+            border-bottom-color: #555;
+        }
+
+        .mc-input {
+            background-color: #000;
+            color: #fff;
+            border: 2px solid #a0a0a0;
+            font-family: 'VT323', monospace;
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-anim {
+            animation: shake 0.5s;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .float-anim {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes hit {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(0.9); filter: sepia(1) hue-rotate(-50deg) saturate(5); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .hit-anim {
+            animation: hit 0.2s;
+        }
+
+        @keyframes popup {
+            0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+            70% { transform: scale(0.9) rotate(-5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        .popup-anim {
+            animation: popup 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(200%) rotate(45deg); }
+        }
+        .shine-effect {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden;
+        }
+        .shine-effect::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            transform: translateX(-100%);
+            animation: shine 2s infinite;
+        }
+
+        .pixel-art {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- SOUND SYSTEM ---
+        const synth = {
+            ctx: null,
+            init: () => {
+                if (!synth.ctx) {
+                    synth.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playTone: (freq, type, duration, vol = 0.1) => {
+                if (!synth.ctx) synth.init();
+                const osc = synth.ctx.createOscillator();
+                const gain = synth.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, synth.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, synth.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, synth.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(synth.ctx.destination);
+                osc.start();
+                osc.stop(synth.ctx.currentTime + duration);
+            },
+            playCorrect: () => {
+                synth.playTone(880, 'square', 0.1, 0.1);
+                setTimeout(() => synth.playTone(1760, 'square', 0.2, 0.1), 100);
+            },
+            playWrong: () => {
+                synth.playTone(150, 'sawtooth', 0.3, 0.2);
+            },
+            playUnlock: () => {
+                [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+                    setTimeout(() => synth.playTone(freq, 'triangle', 0.4, 0.2), i * 150);
+                });
+            },
+            playWin: () => {
+                [523, 523, 523, 659, 783, 783, 659, 783, 1046].forEach((freq, i) => {
+                    setTimeout(() => synth.playTone(freq, 'square', 0.3, 0.15), i * 200);
+                });
+            }
+        };
+
+        // --- SVGs as Components ---
+
+        const HeartIcon = ({ empty }) => (
+            <svg viewBox="0 0 10 10" className="w-8 h-8 mx-1">
+                <path d="M2 2h2v2h2V2h2v2h2v2H8v2H6v2H4V8H2V6H0V4h2V2z" fill={empty ? '#333' : '#ff0000'} stroke="none" />
+                {!empty && <path d="M2 3h1v1H2z" fill="#ff9999" />}
+            </svg>
+        );
+
+        const GreenHeartIcon = ({ empty }) => (
+            <svg viewBox="0 0 10 10" className="w-8 h-8 mx-1">
+                <path d="M2 2h2v2h2V2h2v2h2v2H8v2H6v2H4V8H2V6H0V4h2V2z" fill={empty ? '#333' : '#00ff00'} stroke="none" />
+                {!empty && <path d="M2 3h1v1H2z" fill="#a8ff9a" />}
+            </svg>
+        );
+
+        const DiamondIcon = () => (
+            <svg viewBox="0 0 10 10" className="w-10 h-10 inline-block drop-shadow-md">
+                <path d="M3 0h4v2h3v4H8v4H2V6H0V2h3V0z" fill="#00ffff" />
+                <path d="M3 1h4v1h2v4H8v3H2V6H1V2h2V1z" fill="#00aaaa" opacity="0.5" />
+                <path d="M4 2h2v2H4z" fill="#fff" opacity="0.8" />
+            </svg>
+        );
+
+        const BigItemIcon = ({ type, size = "w-32 h-32" }) => {
+            const armorColor = '#00ffff';
+            const armorDark = '#00aaaa';
+            let paths = null;
+
+            switch (type) {
+                case 'boots':
+                    paths = (
+                        <g>
+                            <path d="M2 4h5v8h-5z M9 4h5v8h-5z" fill={armorColor} />
+                            <path d="M3 5h3v6h-3z M10 5h3v6h-3z" fill={armorDark} opacity="0.5" />
+                        </g>
+                    );
+                    break;
+                case 'leggings':
+                    paths = (
+                        <g>
+                            <path d="M3 1h10v12h-4v-8h-2v8h-4z" fill={armorColor} />
+                            <path d="M4 2h8v2h-8z M4 5h3v7h-3z M9 5h3v7h-3z" fill={armorDark} opacity="0.3" />
+                        </g>
+                    );
+                    break;
+                case 'chestplate':
+                    paths = (
+                        <g>
+                            <path d="M2 1h12v12h-12z" fill={armorColor} />
+                            <path d="M6 3h4v4h-4z" fill={armorDark} opacity="0.3" />
+                            <path d="M3 2h2v10h-2z M11 2h2v10h-2z" fill={armorDark} opacity="0.3" />
+                        </g>
+                    );
+                    break;
+                case 'helmet':
+                    paths = (
+                        <g>
+                            <path d="M2 2h12v10h-2v-4h-8v4h-2z" fill={armorColor} />
+                            <path d="M3 3h10v2h-10z" fill={armorDark} opacity="0.3" />
+                            <rect x="7" y="2" width="2" height="6" fill={armorDark} opacity="0.5" />
+                        </g>
+                    );
+                    break;
+                case 'sword':
+                    paths = (
+                        <g transform="translate(8,8) rotate(-45)">
+                            <rect x="-1" y="-7" width="2" height="10" fill="#00ffff" />
+                            <rect x="-2" y="3" width="4" height="1" fill="#553311" />
+                            <rect x="-0.5" y="4" width="1" height="3" fill="#553311" />
+                        </g>
+                    );
+                    break;
+                default:
+                    return null;
+            }
+
+            return (
+                <svg viewBox="0 0 16 16" className={`${size} drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]`}>
+                    {paths}
+                </svg>
+            );
+        };
+
+        const Steve = ({ gear }) => {
+            const skinColor = '#e0aa94';
+            const shirtColor = '#00aaaa';
+            const pantColor = '#3030aa';
+            const armorColor = '#00ffff';
+            const armorDark = '#00aaaa';
+
+            return (
+                <svg viewBox="0 0 16 32" className="w-48 h-96 drop-shadow-2xl">
+                    <rect x="4" y="0" width="8" height="8" fill={skinColor} />
+                    <rect x="4" y="0" width="8" height="2" fill="#4a3020" />
+                    <rect x="4" y="2" width="1" height="1" fill="#4a3020" />
+                    <rect x="11" y="2" width="1" height="1" fill="#4a3020" />
+                    <rect x="5" y="4" width="2" height="1" fill="#fff" />
+                    <rect x="6" y="4" width="1" height="1" fill="#4040a0" />
+                    <rect x="9" y="4" width="2" height="1" fill="#fff" />
+                    <rect x="10" y="4" width="1" height="1" fill="#4040a0" />
+                    <rect x="6" y="6" width="4" height="1" fill="#a06050" />
+
+                    {gear.helmet && (
+                        <g>
+                            <rect x="3" y="-1" width="10" height="3" fill={armorColor} />
+                            <rect x="3" y="2" width="1" height="7" fill={armorColor} />
+                            <rect x="12" y="2" width="1" height="7" fill={armorColor} />
+                            <rect x="7.5" y="1" width="1" height="3" fill={armorDark} opacity="0.5" />
+                        </g>
+                    )}
+
+                    <rect x="4" y="8" width="8" height="12" fill={gear.chestplate ? armorColor : shirtColor} />
+                    {gear.chestplate && <rect x="6" y="10" width="4" height="4" fill={armorDark} opacity="0.3" />}
+
+                    <rect x="0" y="8" width="4" height="12" fill={skinColor} />
+                    <rect x="0" y="8" width="4" height="4" fill={gear.chestplate ? armorColor : shirtColor} />
+                    <rect x="12" y="8" width="4" height="12" fill={skinColor} />
+                    <rect x="12" y="8" width="4" height="4" fill={gear.chestplate ? armorColor : shirtColor} />
+
+                    {gear.sword && (
+                        <g transform="translate(14, 16) rotate(-45)">
+                            <rect x="0" y="-8" width="2" height="8" fill="#00ffff" stroke="#00aaaa" strokeWidth="0.2" />
+                            <rect x="-1" y="0" width="4" height="1" fill="#553311" />
+                            <rect x="0.5" y="1" width="1" height="3" fill="#553311" />
+                        </g>
+                    )}
+
+                    <rect x="4" y="20" width="4" height="12" fill={gear.leggings ? armorColor : pantColor} />
+                    <rect x="8" y="20" width="4" height="12" fill={gear.leggings ? armorColor : pantColor} />
+
+                    {gear.boots && (
+                        <g>
+                            <rect x="3" y="28" width="5" height="4" fill={armorColor} />
+                            <rect x="8" y="28" width="5" height="4" fill={armorColor} />
+                        </g>
+                    )}
+                </svg>
+            );
+        };
+
+        const Zombie = ({ dead }) => {
+            if (dead) {
+                return (
+                    <div className="w-48 h-96 flex items-end justify-center">
+                        <div className="text-red-600 text-4xl animate-bounce font-bold">DEFEATED!</div>
+                    </div>
+                );
+            }
+
+            return (
+                <svg viewBox="0 0 16 32" className="w-48 h-96 float-anim drop-shadow-2xl">
+                    <rect x="4" y="0" width="8" height="8" fill="#55aa55" />
+                    <rect x="4" y="0" width="8" height="2" fill="#338833" />
+                    <rect x="5" y="4" width="2" height="1" fill="#000" />
+                    <rect x="9" y="4" width="2" height="1" fill="#000" />
+                    <rect x="-2" y="8" width="10" height="4" fill="#4444bb" />
+                    <rect x="-2" y="12" width="6" height="4" fill="#55aa55" />
+                    <rect x="8" y="8" width="10" height="4" fill="#4444bb" />
+                    <rect x="12" y="12" width="6" height="4" fill="#55aa55" />
+                    <rect x="4" y="8" width="8" height="12" fill="#4444bb" />
+                    <rect x="4" y="20" width="4" height="12" fill="#442266" />
+                    <rect x="8" y="20" width="4" height="12" fill="#442266" />
+                </svg>
+            );
+        };
+
+        const UnlockOverlay = ({ item }) => {
+            if (!item) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70 pointer-events-none">
+                    <div className="popup-anim flex flex-col items-center">
+                        <div className="text-yellow-400 text-6xl font-bold mb-4 drop-shadow-[4px_4px_0_#000]">ITEM GET!</div>
+                        <div className="relative w-48 h-48 bg-gray-600 border-4 border-gray-400 rounded-lg flex items-center justify-center shadow-[0_0_50px_rgba(255,255,0,0.5)]">
+                            <div className="shine-effect" />
+                            <BigItemIcon type={item.key} />
+                        </div>
+                        <div className="text-white text-4xl mt-4 font-bold drop-shadow-[2px_2px_0_#000]">{item.name}</div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main Game Logic ---
+
+        const ITEMS = [
+            { name: 'Boots', cost: 5, key: 'boots' },
+            { name: 'Leggings', cost: 7, key: 'leggings' },
+            { name: 'Chestplate', cost: 9, key: 'chestplate' },
+            { name: 'Helmet', cost: 11, key: 'helmet' },
+            { name: 'Sword', cost: 13, key: 'sword' }
+        ];
+
+        const App = () => {
+            const [hp, setHp] = React.useState(3);
+            const [diamonds, setDiamonds] = React.useState(0);
+            const [zombieHp, setZombieHp] = React.useState(5);
+            const [gear, setGear] = React.useState({
+                boots: false,
+                leggings: false,
+                chestplate: false,
+                helmet: false,
+                sword: false
+            });
+            const [problem, setProblem] = React.useState({ n1: 0, n2: 0, op: '+', ans: 0 });
+            const [input, setInput] = React.useState('');
+            const [gameState, setGameState] = React.useState('playing');
+            const [steveHit, setSteveHit] = React.useState(false);
+            const [zombieHit, setZombieHit] = React.useState(false);
+            const [message, setMessage] = React.useState('');
+            const [justUnlockedItem, setJustUnlockedItem] = React.useState(null);
+
+            // Index of the next item to unlock (0..ITEMS.length-1)
+            const [nextItemIndex, setNextItemIndex] = React.useState(0);
+
+            // Next item progress info for HUD
+            const hasNextItem = nextItemIndex < ITEMS.length;
+            const nextItem = hasNextItem ? ITEMS[nextItemIndex] : null;
+            const prevThreshold = hasNextItem
+                ? ITEMS.slice(0, nextItemIndex).reduce((sum, item) => sum + item.cost, 0)
+                : 0;
+            const nextThreshold = hasNextItem && nextItem
+                ? prevThreshold + nextItem.cost
+                : 0;
+            const itemProgress = hasNextItem && nextItem
+                ? Math.min(Math.max(0, diamonds - prevThreshold), nextItem.cost)
+                : 0;
+
+            const generateProblem = () => {
+                const n1 = Math.floor(Math.random() * 10);
+                const n2 = Math.floor(Math.random() * 10);
+                const isAdd = Math.random() > 0.5;
+
+                let newProblem;
+                if (isAdd) {
+                    newProblem = { n1, n2, op: '+', ans: n1 + n2 };
+                } else {
+                    const max = Math.max(n1, n2);
+                    const min = Math.min(n1, n2);
+                    newProblem = { n1: max, n2: min, op: '-', ans: max - min };
+                }
+                setProblem(newProblem);
+                setInput('');
+            };
+
+            React.useEffect(() => {
+                generateProblem();
+                synth.init();
+            }, []);
+
+            // Unlock thresholds are cumulative sums of costs:
+            // Boots: 5
+            // Leggings: 5 + 7 = 12
+            // Chestplate: 12 + 9 = 21
+            // Helmet: 21 + 11 = 32
+            // Sword: 32 + 13 = 45
+            const checkGearUnlock = (currentDiamonds) => {
+                if (nextItemIndex >= ITEMS.length) return;
+
+                const requiredTotal = ITEMS.slice(0, nextItemIndex + 1).reduce(
+                    (sum, item) => sum + item.cost,
+                    0
+                );
+
+                if (currentDiamonds >= requiredTotal) {
+                    const item = ITEMS[nextItemIndex];
+                    const newGear = { ...gear, [item.key]: true };
+
+                    synth.playUnlock();
+                    setJustUnlockedItem(item);
+                    setGear(newGear);
+                    setNextItemIndex(nextItemIndex + 1);
+
+                    const OVERLAY_DURATION = 2500;
+
+                    setTimeout(() => {
+                        setJustUnlockedItem(null);
+                        setZombieHp((prev) => Math.max(0, prev - 1));
+                        setZombieHit(true);
+                        setTimeout(() => setZombieHit(false), 300);
+
+                        if (item.key === 'sword' && gameState !== 'won') {
+                            setTimeout(() => {
+                                setGameState('won');
+                                synth.playWin();
+                            }, 700);
+                        }
+                    }, OVERLAY_DURATION);
+                }
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (gameState !== 'playing') return;
+
+                if (synth.ctx && synth.ctx.state === 'suspended') synth.ctx.resume();
+                if (!synth.ctx) synth.init();
+
+                const val = parseInt(input, 10);
+                if (Number.isNaN(val)) return;
+
+                if (val === problem.ans) {
+                    synth.playCorrect();
+                    const newDiamonds = diamonds + 1;
+                    setDiamonds(newDiamonds);
+                    checkGearUnlock(newDiamonds);
+                    generateProblem();
+                } else {
+                    synth.playWrong();
+                    setSteveHit(true);
+                    setTimeout(() => setSteveHit(false), 300);
+                    const newHp = hp - 1;
+                    setHp(newHp);
+                    if (newHp <= 0) {
+                        setGameState('lost');
+                    }
+                }
+            };
+
+            const restart = () => {
+                setHp(3);
+                setDiamonds(0);
+                setZombieHp(5);
+                setGear({ boots: false, leggings: false, chestplate: false, helmet: false, sword: false });
+                setGameState('playing');
+                generateProblem();
+                setMessage('');
+                setJustUnlockedItem(null);
+                setNextItemIndex(0);
+            };
+
+            const toggleFullScreen = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch((err) => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                } else if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            };
+
+            return (
+                <div
+                    className="min-h-screen flex flex-col items-center justify-center p-4 relative"
+                    style={{
+                        backgroundImage:
+                            'linear-gradient(to bottom, #87CEEB 0%, #87CEEB 60%, #5ba35b 60%, #5ba35b 100%)'
+                    }}
+                >
+                    <UnlockOverlay item={justUnlockedItem} />
+
+                    {/* HUD */}
+                    {/* Next item progress centered at top */}
+                    {hasNextItem && nextItem && (
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+                            <div className="flex items-center gap-3 bg-black/80 px-4 py-2 rounded-lg text-white text-lg border-2 border-white/60 shadow-lg">
+                                <BigItemIcon type={nextItem.key} size="w-12 h-12" />
+                                <div className="flex flex-col leading-tight">
+                                    <span className="text-xs uppercase tracking-[0.2em] text-yellow-300">
+                                        Next Item
+                                    </span>
+                                    <span className="text-xl font-bold">
+                                        {nextItem.name} — {itemProgress}/{nextItem.cost} <span className="text-cyan-400">♦</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Game Stage */}
+                    <div className="w-full max-w-4xl flex flex-col md:flex-row justify-between items-end h-[50vh] md:h-[60vh] relative mb-4">
+                        <div className={`relative z-10 transform translate-x-4 md:translate-x-20 transition-all duration-300 ${steveHit ? 'hit-anim' : ''}`}>
+                            <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex">
+                                {[1, 2, 3].map((i) => (
+                                    <HeartIcon key={i} empty={i > hp} />
+                                ))}
+                            </div>
+                            {message && (
+                                <div className="absolute -top-16 left-0 w-48 text-center animate-bounce text-yellow-300 font-bold text-xl drop-shadow-md">
+                                    {message}
+                                </div>
+                            )}
+                            <Steve gear={gear} />
+                        </div>
+
+                        <div className="hidden md:block absolute left-1/2 bottom-20 text-4xl text-white font-bold opacity-50 transform -translate-x-1/2">
+                            VS
+                        </div>
+
+                        <div
+                            className={`relative z-10 transform -translate-x-4 md:-translate-x-20 transition-all duration-300 ${
+                                zombieHit ? 'hit-anim' : ''
+                            }`}
+                        >
+                            <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <GreenHeartIcon key={i} empty={i > zombieHp} />
+                                ))}
+                            </div>
+                            <Zombie dead={gameState === 'won'} />
+                        </div>
+                    </div>
+
+                    {/* Control Panel */}
+                    <div className="w-full max-w-md z-20">
+                        {gameState === 'playing' ? (
+                            <form onSubmit={handleSubmit} className="mc-panel p-6 flex flex-col items-center gap-4 shadow-2xl">
+                                <div className="text-3xl md:text-4xl text-black font-bold mb-2">
+                                    {problem.n1} {problem.op} {problem.n2} = ?
+                                </div>
+                                <div className="flex w-full gap-2">
+                                    <input
+                                        type="number"
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        className="mc-input flex-1 p-3 text-2xl text-center focus:outline-none focus:border-yellow-500"
+                                        placeholder="?"
+                                        autoFocus
+                                    />
+                                    <button type="submit" className="mc-btn px-6 py-2 text-xl font-bold active:translate-y-1">
+                                        ATK
+                                    </button>
+                                </div>
+                                <div className="text-gray-600 text-sm">Press Enter to Attack</div>
+                            </form>
+                        ) : (
+                            <div className="mc-panel p-8 flex flex-col items-center gap-4 shadow-2xl text-center">
+                                <h2
+                                    className={`text-4xl font-bold ${
+                                        gameState === 'won' ? 'text-green-700' : 'text-red-700'
+                                    }`}
+                                >
+                                    {gameState === 'won' ? 'VICTORY!' : 'GAME OVER'}
+                                </h2>
+                                <p className="text-xl">
+                                    {gameState === 'won'
+                                        ? 'You crafted the Diamond Sword and defeated the Zombie!'
+                                        : 'The Zombie got you. Try again!'}
+                                </p>
+                                <button
+                                    onClick={restart}
+                                    className="mc-btn px-8 py-4 text-2xl font-bold mt-4"
+                                >
+                                    Respawn
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Ground */}
+                    <div className="absolute bottom-0 w-full h-1/3 bg-[#5ba35b] border-t-8 border-[#4a854a] -z-10">
+                        <div className="absolute top-0 left-10 w-4 h-4 bg-[#7CBA3D]" />
+                        <div className="absolute top-2 left-14 w-4 h-4 bg-[#7CBA3D]" />
+                        <div className="absolute top-0 right-20 w-4 h-4 bg-[#7CBA3D]" />
+                        <div className="absolute top-4 right-10 w-4 h-4 bg-[#7CBA3D]" />
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
