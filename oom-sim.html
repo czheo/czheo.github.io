@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prefetch vs VRAM Simulator</title>
+  <style>
+    :root {
+      --bg-0: #f7f2e7;
+      --bg-1: #efe6d3;
+      --ink: #10222e;
+      --ink-dim: #3b5563;
+      --panel: #fffaf0;
+      --line: #d4c7ac;
+      --accent: #e1633a;
+      --accent-2: #2f8795;
+      --warn: #b23a2f;
+      --ok: #2f7a41;
+      --loader: #df7f2a;
+      --copy: #2f8795;
+      --compute: #6f6fa8;
+      --pinned: #d08f2d;
+      --vram: #3b7dd8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Trebuchet MS", "Segoe UI", "Verdana", sans-serif;
+      background:
+        radial-gradient(circle at 15% 12%, #fff8ea 0%, transparent 42%),
+        radial-gradient(circle at 86% 18%, #fde4cf 0%, transparent 37%),
+        linear-gradient(160deg, var(--bg-0), var(--bg-1));
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 18px 34px;
+    }
+
+    .hero {
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 18px;
+      background: linear-gradient(120deg, #fffdf6, #fff3df);
+      box-shadow: 0 8px 24px rgba(16, 34, 46, 0.08);
+      animation: appear 520ms ease-out;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+      letter-spacing: 0.4px;
+    }
+
+    .sub {
+      margin: 8px 0 0;
+      color: var(--ink-dim);
+      font-size: 0.98rem;
+      line-height: 1.35;
+      max-width: 900px;
+    }
+
+    .layout {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 12px;
+    }
+
+    .card {
+      border: 2px solid var(--line);
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 4px 10px rgba(16, 34, 46, 0.06);
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .control {
+      margin-bottom: 10px;
+    }
+
+    .control .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .value-pill {
+      min-width: 74px;
+      text-align: right;
+      color: var(--ink-dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .presets {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .sim-controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    button {
+      border: 1px solid #aa9c80;
+      border-radius: 8px;
+      padding: 8px 7px;
+      background: #fff5e5;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.83rem;
+    }
+
+    button:hover { background: #ffe7c9; }
+
+    .sim {
+      padding: 10px;
+      background:
+        linear-gradient(180deg, #fffef9, #fff7ea 80%),
+        repeating-linear-gradient(
+          90deg,
+          rgba(16, 34, 46, 0.03),
+          rgba(16, 34, 46, 0.03) 1px,
+          transparent 1px,
+          transparent 28px
+        );
+    }
+
+    .pipeline {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .stage {
+      border: 2px solid #cbbd9f;
+      border-radius: 12px;
+      padding: 10px;
+      min-height: 152px;
+      background: #fffdf7;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.1;
+      pointer-events: none;
+      background: repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(16,34,46,0.35) 6px, rgba(16,34,46,0.35) 7px);
+    }
+
+    .stage h3 {
+      margin: 0;
+      font-size: 0.92rem;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .stage .speed {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: var(--ink-dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .note {
+      margin-top: 6px;
+      font-size: 0.83rem;
+      color: #4d6773;
+      line-height: 1.28;
+    }
+
+    .flow-track {
+      margin-top: 9px;
+      height: 36px;
+      border-radius: 7px;
+      border: 1px solid #d7cbb1;
+      background: #fbf2e2;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dot {
+      position: absolute;
+      top: 8px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.6) inset;
+      animation: move 2.4s linear infinite;
+    }
+    .sim-paused .dot { animation-play-state: paused; }
+
+    .dot.loader { background: var(--loader); }
+    .dot.copy { background: var(--copy); }
+    .dot.compute { background: var(--compute); }
+
+    .meter {
+      margin-top: 10px;
+    }
+
+    .meter .top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--ink-dim);
+    }
+
+    .bar {
+      margin-top: 4px;
+      height: 15px;
+      border: 1px solid #c7b99c;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #f4e8d2;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0;
+      transition: width 140ms linear;
+      background: linear-gradient(90deg, #8ac5d0, #357e8c);
+    }
+
+    .bar.pinned .fill { background: linear-gradient(90deg, #f3bc53, #c98415); }
+    .bar.vram .fill { background: linear-gradient(90deg, #8cb9ff, #336fd1); }
+
+    .status {
+      margin-top: 10px;
+      border: 2px solid #cdbf9f;
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 0.92rem;
+      background: #fff7e9;
+      min-height: 62px;
+    }
+
+    .status strong {
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-size: 0.82rem;
+      color: #5b4d34;
+    }
+
+    .status.warn { border-color: #cf9a92; background: #fff0ee; color: #70261f; }
+    .status.ok { border-color: #a8c6ad; background: #f1fff3; color: #1f5a2c; }
+
+    .legend {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--ink-dim);
+      font-size: 0.82rem;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .swatch {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .metrics {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .metric {
+      border: 1px solid #d7cbb2;
+      border-radius: 9px;
+      background: #fffbf3;
+      padding: 7px;
+      font-size: 0.83rem;
+    }
+
+    .metric .k {
+      color: var(--ink-dim);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .metric .v {
+      font-size: 1.03rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @keyframes move {
+      from { transform: translateX(-20px); }
+      to { transform: translateX(300px); }
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .pipeline { grid-template-columns: 1fr; }
+      .dot { animation-duration: 1.9s; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>Prefetch vs VRAM: Factory Simulator</h1>
+      <p class="sub">Think of training like a conveyor factory. Loader produces MB/s into pinned host RAM, H→D transfer moves MB/s into VRAM, and compute drains MB/s. Tune rates and capacities to see which part blocks first and where OOM risk appears.</p>
+    </section>
+
+    <main class="layout">
+      <aside class="card">
+        <h2>Controls</h2>
+
+        <div class="control">
+          <div class="row"><label for="loaderSpeed">Loader speed</label><span class="value-pill" id="loaderSpeedVal"></span></div>
+          <input id="loaderSpeed" type="range" min="50" max="10000" step="50" value="2400">
+        </div>
+
+        <div class="control">
+          <div class="row"><label for="copySpeed">H→D copy speed</label><span class="value-pill" id="copySpeedVal"></span></div>
+          <input id="copySpeed" type="range" min="50" max="10000" step="50" value="3200">
+        </div>
+
+        <div class="control">
+          <div class="row"><label for="computeSpeed">GPU compute speed</label><span class="value-pill" id="computeSpeedVal"></span></div>
+          <input id="computeSpeed" type="range" min="50" max="10000" step="50" value="2800">
+        </div>
+
+        <div class="control">
+          <div class="row"><label for="prefetch">Prefetch capacity</label><span class="value-pill" id="prefetchVal"></span></div>
+          <input id="prefetch" type="range" min="256" max="65536" step="256" value="8192">
+        </div>
+
+        <div class="control">
+          <div class="row"><label for="inflight">VRAM backlog capacity</label><span class="value-pill" id="inflightVal"></span></div>
+          <input id="inflight" type="range" min="128" max="32768" step="128" value="4096">
+        </div>
+
+        <div class="control">
+          <div class="row"><label for="batchSize">Batch memory size</label><span class="value-pill" id="batchSizeVal"></span></div>
+          <input id="batchSize" type="range" min="16" max="4096" step="16" value="256">
+        </div>
+
+        <div class="control">
+          <div class="row"><label for="pinnedLimit">Pinned RAM limit</label><span class="value-pill" id="pinnedLimitVal"></span></div>
+          <input id="pinnedLimit" type="range" min="512" max="131072" step="512" value="32768">
+        </div>
+
+        <div class="control">
+          <div class="row"><label for="vramLimit">VRAM limit</label><span class="value-pill" id="vramLimitVal"></span></div>
+          <input id="vramLimit" type="range" min="512" max="65536" step="256" value="16384">
+        </div>
+
+        <div class="presets">
+          <button data-preset="typical">Typical</button>
+          <button data-preset="vram">VRAM Risk</button>
+          <button data-preset="pinned">Pinned RAM Risk</button>
+          <button data-preset="stalled">Stalled GPU</button>
+        </div>
+
+        <div class="sim-controls">
+          <button id="startSim" type="button">Start</button>
+          <button id="stopSim" type="button">Stop</button>
+          <button id="clearSim" type="button">Clear</button>
+        </div>
+      </aside>
+
+      <section class="card sim">
+        <h2>Pipeline State</h2>
+        <div class="pipeline">
+          <article class="stage">
+            <h3>1. DataLoader + Prefetch</h3>
+            <div class="speed" id="sLoader"></div>
+            <div class="note">Creates CPU-side batches. If queue is full, loader blocks. Prefetch mostly consumes pinned host RAM.</div>
+            <div class="flow-track" id="trackLoader"></div>
+            <div class="meter">
+              <div class="top"><span>Prefetch queue occupancy</span><span id="qCpuLabel"></span></div>
+              <div class="bar"><div class="fill" id="qCpuFill"></div></div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <h3>2. H→D Transfer</h3>
+            <div class="speed" id="sCopy"></div>
+            <div class="note">Moves batch from pinned RAM to VRAM. Fast copy helps, but cannot beat queue bounds or tensor lifetime issues.</div>
+            <div class="flow-track" id="trackCopy"></div>
+            <div class="meter">
+              <div class="top"><span>VRAM backlog waiting for compute</span><span id="qCopyLabel"></span></div>
+              <div class="bar"><div class="fill" id="qCopyFill"></div></div>
+            </div>
+          </article>
+
+          <article class="stage">
+            <h3>3. GPU Compute</h3>
+            <div class="speed" id="sCompute"></div>
+            <div class="note">Consumes VRAM-resident bytes. Slow compute or high backlog capacity can hold tensors longer and push VRAM toward OOM.</div>
+            <div class="flow-track" id="trackCompute"></div>
+            <div class="meter">
+              <div class="top"><span>VRAM backlog occupancy</span><span id="qGpuLabel"></span></div>
+              <div class="bar"><div class="fill" id="qGpuFill"></div></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="meter">
+          <div class="top"><span>Pinned host RAM usage</span><span id="pinnedLabel"></span></div>
+          <div class="bar pinned"><div class="fill" id="pinnedFill"></div></div>
+        </div>
+
+        <div class="meter">
+          <div class="top"><span>VRAM usage</span><span id="vramLabel"></span></div>
+          <div class="bar vram"><div class="fill" id="vramFill"></div></div>
+        </div>
+
+        <div class="status" id="statusBox">
+          <strong>Current diagnosis</strong>
+          <span id="statusText">Running baseline simulation...</span>
+        </div>
+
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--loader)"></i>Loader packets</span>
+          <span><i class="swatch" style="background:var(--copy)"></i>Transfer packets</span>
+          <span><i class="swatch" style="background:var(--compute)"></i>Compute packets</span>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><span class="k">Produced throughput</span><span class="v" id="mProduced">0</span></div>
+          <div class="metric"><span class="k">Transferred throughput</span><span class="v" id="mTransferred">0</span></div>
+          <div class="metric"><span class="k">Consumed throughput</span><span class="v" id="mConsumed">0</span></div>
+          <div class="metric"><span class="k">Leading bottleneck</span><span class="v" id="mBottleneck">-</span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const ids = [
+      "loaderSpeed", "copySpeed", "computeSpeed", "prefetch", "inflight",
+      "batchSize", "pinnedLimit", "vramLimit"
+    ];
+
+    const controls = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+    const labels = Object.fromEntries(ids.map((id) => [id, document.getElementById(id + "Val")]));
+
+    const state = {
+      qCpuMb: 0,
+      qGpuMb: 0,
+      producedCounter: 0,
+      transferredCounter: 0,
+      consumedCounter: 0
+    };
+
+    const ui = {
+      sLoader: document.getElementById("sLoader"),
+      sCopy: document.getElementById("sCopy"),
+      sCompute: document.getElementById("sCompute"),
+      qCpuFill: document.getElementById("qCpuFill"),
+      qCpuLabel: document.getElementById("qCpuLabel"),
+      qCopyFill: document.getElementById("qCopyFill"),
+      qCopyLabel: document.getElementById("qCopyLabel"),
+      qGpuFill: document.getElementById("qGpuFill"),
+      qGpuLabel: document.getElementById("qGpuLabel"),
+      pinnedFill: document.getElementById("pinnedFill"),
+      pinnedLabel: document.getElementById("pinnedLabel"),
+      vramFill: document.getElementById("vramFill"),
+      vramLabel: document.getElementById("vramLabel"),
+      statusBox: document.getElementById("statusBox"),
+      statusText: document.getElementById("statusText"),
+      mProduced: document.getElementById("mProduced"),
+      mTransferred: document.getElementById("mTransferred"),
+      mConsumed: document.getElementById("mConsumed"),
+      mBottleneck: document.getElementById("mBottleneck")
+    };
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function value(id) {
+      return Number(controls[id].value);
+    }
+
+    function formatMB(v) {
+      if (v >= 1024) {
+        return (v / 1024).toFixed(2) + " GB";
+      }
+      return v.toFixed(0) + " MB";
+    }
+
+    function syncLabels() {
+      const batchMb = value("batchSize");
+      const prefetchMb = value("prefetch");
+      const inflightMb = value("inflight");
+
+      labels.loaderSpeed.textContent = value("loaderSpeed") + " MB/s";
+      labels.copySpeed.textContent = value("copySpeed") + " MB/s";
+      labels.computeSpeed.textContent = value("computeSpeed") + " MB/s";
+      labels.prefetch.textContent = `${formatMB(prefetchMb)} (~${(prefetchMb / batchMb).toFixed(1)} batches)`;
+      labels.inflight.textContent = `${formatMB(inflightMb)} (~${(inflightMb / batchMb).toFixed(1)} batches)`;
+      labels.batchSize.textContent = formatMB(value("batchSize"));
+      labels.pinnedLimit.textContent = formatMB(value("pinnedLimit"));
+      labels.vramLimit.textContent = formatMB(value("vramLimit"));
+    }
+
+    function setFill(fillEl, ratio) {
+      fillEl.style.width = (clamp(ratio, 0, 1) * 100).toFixed(1) + "%";
+    }
+
+    function addDots(trackId, cls, count) {
+      const track = document.getElementById(trackId);
+      const n = Math.max(1, Math.min(12, Math.round(count)));
+      if (track.dataset.dotCount === String(n) && track.dataset.dotClass === cls) return;
+      track.dataset.dotCount = String(n);
+      track.dataset.dotClass = cls;
+      track.innerHTML = "";
+      for (let i = 0; i < n; i++) {
+        const dot = document.createElement("span");
+        dot.className = "dot " + cls;
+        dot.style.left = (i * 28 - 24) + "px";
+        dot.style.animationDelay = (-i * 0.22) + "s";
+        track.appendChild(dot);
+      }
+    }
+
+    function setAnimationPaused(paused) {
+      document.body.classList.toggle("sim-paused", paused);
+    }
+
+    function applyPreset(name) {
+      const sets = {
+        typical: { loaderSpeed: 2400, copySpeed: 3200, computeSpeed: 2800, prefetch: 8192, inflight: 4096, batchSize: 256, pinnedLimit: 32768, vramLimit: 16384 },
+        vram: { loaderSpeed: 4200, copySpeed: 5200, computeSpeed: 1500, prefetch: 12288, inflight: 12288, batchSize: 512, pinnedLimit: 49152, vramLimit: 8192 },
+        pinned: { loaderSpeed: 6000, copySpeed: 1100, computeSpeed: 2500, prefetch: 49152, inflight: 3072, batchSize: 384, pinnedLimit: 16384, vramLimit: 24576 },
+        stalled: { loaderSpeed: 5200, copySpeed: 180, computeSpeed: 220, prefetch: 32768, inflight: 16384, batchSize: 512, pinnedLimit: 12288, vramLimit: 12288 }
+      };
+      const cfg = sets[name];
+      if (!cfg) return;
+      for (const [k, v] of Object.entries(cfg)) controls[k].value = v;
+      syncLabels();
+    }
+
+    for (const ctrl of Object.values(controls)) {
+      ctrl.addEventListener("input", syncLabels);
+    }
+
+    document.querySelectorAll("button[data-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
+    });
+
+    syncLabels();
+    addDots("trackLoader", "loader", 4);
+    addDots("trackCopy", "copy", 4);
+    addDots("trackCompute", "compute", 4);
+
+    let last = performance.now();
+    let acc = 0;
+    let running = true;
+    let rafId = null;
+
+    function resetSimulationState() {
+      state.qCpuMb = 0;
+      state.qGpuMb = 0;
+      state.producedCounter = 0;
+      state.transferredCounter = 0;
+      state.consumedCounter = 0;
+      acc = 0;
+      ui.mProduced.textContent = "0 MB/s";
+      ui.mTransferred.textContent = "0 MB/s";
+      ui.mConsumed.textContent = "0 MB/s";
+      ui.mBottleneck.textContent = "Cleared";
+      ui.statusBox.className = "status ok";
+      ui.statusText.textContent = "Simulation state cleared. Press Start to run.";
+      setFill(ui.qCpuFill, 0);
+      setFill(ui.qCopyFill, 0);
+      setFill(ui.qGpuFill, 0);
+      setFill(ui.pinnedFill, 0);
+      setFill(ui.vramFill, 0);
+      ui.qCpuLabel.textContent = "0 MB";
+      ui.qCopyLabel.textContent = "0 MB waiting";
+      ui.qGpuLabel.textContent = "0 MB";
+      ui.pinnedLabel.textContent = "0 MB";
+      ui.vramLabel.textContent = "0 MB";
+      addDots("trackLoader", "loader", 1);
+      addDots("trackCopy", "copy", 1);
+      addDots("trackCompute", "compute", 1);
+    }
+
+    function startSimulation() {
+      if (running) return;
+      running = true;
+      setAnimationPaused(false);
+      last = performance.now();
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function stopSimulation() {
+      running = false;
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      setAnimationPaused(true);
+      ui.statusBox.className = "status";
+      ui.statusText.textContent = "Simulation paused. Press Start to resume.";
+      ui.mBottleneck.textContent = "Paused";
+    }
+
+    document.getElementById("startSim").addEventListener("click", startSimulation);
+    document.getElementById("stopSim").addEventListener("click", stopSimulation);
+    document.getElementById("clearSim").addEventListener("click", () => {
+      const wasRunning = running;
+      stopSimulation();
+      resetSimulationState();
+      if (wasRunning) startSimulation();
+    });
+
+    function tick(now) {
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      acc += dt;
+
+      const loader = value("loaderSpeed");
+      const copy = value("copySpeed");
+      const compute = value("computeSpeed");
+      const prefetch = value("prefetch");
+      const inflight = value("inflight");
+      const batchMB = value("batchSize");
+
+      let produced = loader * dt;
+      let transferred = copy * dt;
+      let consumed = compute * dt;
+
+      const cpuSpace = Math.max(0, prefetch - state.qCpuMb);
+      produced = Math.min(produced, cpuSpace);
+      state.qCpuMb += produced;
+
+      transferred = Math.min(transferred, state.qCpuMb);
+      const gpuSpace = Math.max(0, inflight - state.qGpuMb);
+      transferred = Math.min(transferred, gpuSpace);
+      state.qCpuMb -= transferred;
+      state.qGpuMb += transferred;
+
+      consumed = Math.min(consumed, state.qGpuMb);
+      state.qGpuMb -= consumed;
+
+      state.producedCounter += produced;
+      state.transferredCounter += transferred;
+      state.consumedCounter += consumed;
+
+      const pinnedUse = state.qCpuMb;
+      const vramUse = state.qGpuMb;
+      const pinnedLimit = value("pinnedLimit");
+      const vramLimit = value("vramLimit");
+
+      const qCopyRatio = inflight > 0 ? state.qGpuMb / inflight : 0;
+
+      ui.sLoader.textContent = `Throughput: ${loader.toFixed(0)} MB/s`;
+      ui.sCopy.textContent = `Throughput: ${copy.toFixed(0)} MB/s`;
+      ui.sCompute.textContent = `Throughput: ${compute.toFixed(0)} MB/s`;
+
+      setFill(ui.qCpuFill, state.qCpuMb / prefetch);
+      ui.qCpuLabel.textContent = `${formatMB(state.qCpuMb)} / ${formatMB(prefetch)} (~${(state.qCpuMb / batchMB).toFixed(1)} batches)`;
+
+      setFill(ui.qCopyFill, qCopyRatio);
+      ui.qCopyLabel.textContent = `${formatMB(state.qGpuMb)} waiting (~${(state.qGpuMb / batchMB).toFixed(1)} batches)`;
+
+      setFill(ui.qGpuFill, state.qGpuMb / inflight);
+      ui.qGpuLabel.textContent = `${formatMB(state.qGpuMb)} / ${formatMB(inflight)} (~${(state.qGpuMb / batchMB).toFixed(1)} batches)`;
+
+      setFill(ui.pinnedFill, pinnedUse / pinnedLimit);
+      ui.pinnedLabel.textContent = `${formatMB(pinnedUse)} / ${formatMB(pinnedLimit)}`;
+
+      setFill(ui.vramFill, vramUse / vramLimit);
+      ui.vramLabel.textContent = `${formatMB(vramUse)} / ${formatMB(vramLimit)}`;
+
+      addDots("trackLoader", "loader", loader / 700 + (state.qCpuMb / Math.max(prefetch, 1)) * 5);
+      addDots("trackCopy", "copy", copy / 700 + (state.qGpuMb / Math.max(inflight, 1)) * 5);
+      addDots("trackCompute", "compute", compute / 700 + (state.qGpuMb / Math.max(inflight, 1)) * 6);
+
+      let bottleneck = "Balanced";
+      let status = "Pipeline is flowing. No pool is close to saturation.";
+      let cls = "status ok";
+
+      const loaderBlocked = state.qCpuMb >= prefetch * 0.995;
+      const copyBlocked = state.qGpuMb >= inflight * 0.995;
+      const copyStarved = state.qCpuMb <= Math.max(1, batchMB * 0.1);
+
+      if (pinnedUse >= pinnedLimit) {
+        bottleneck = "Pinned RAM OOM";
+        status = "Prefetch queue exceeded pinned host RAM budget. Reduce prefetch capacity, loader rate, or batch size.";
+        cls = "status warn";
+      } else if (vramUse >= vramLimit) {
+        bottleneck = "VRAM OOM";
+        status = "GPU-resident backlog bytes exceeded VRAM budget. Lower backlog capacity, batch size, or GPU tensor retention.";
+        cls = "status warn";
+      } else if (copyBlocked && compute < copy) {
+        bottleneck = "Compute bottleneck";
+        status = "GPU compute drains slower than transfer, so VRAM backlog queue rises.";
+      } else if (loaderBlocked && loader > copy) {
+        bottleneck = "Copy bottleneck";
+        status = "Loader is filling prefetch faster than H→D can drain. Host pinned memory pressure rises.";
+      } else if (copyStarved && loader < copy) {
+        bottleneck = "Loader bottleneck";
+        status = "Transfer is often idle because DataLoader cannot keep up.";
+      }
+
+      ui.statusBox.className = cls;
+      ui.statusText.textContent = status;
+      ui.mBottleneck.textContent = bottleneck;
+
+      if (acc >= 1) {
+        ui.mProduced.textContent = `${state.producedCounter.toFixed(0)} MB/s`;
+        ui.mTransferred.textContent = `${state.transferredCounter.toFixed(0)} MB/s`;
+        ui.mConsumed.textContent = `${state.consumedCounter.toFixed(0)} MB/s`;
+        state.producedCounter = 0;
+        state.transferredCounter = 0;
+        state.consumedCounter = 0;
+        acc = 0;
+      }
+
+      rafId = requestAnimationFrame(tick);
+    }
+
+    setAnimationPaused(false);
+    rafId = requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
