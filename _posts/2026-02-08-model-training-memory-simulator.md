@@ -25,7 +25,7 @@ author: czheo
 
 <iframe
   class="oom-sim-frame"
-  src="/oom-sim.html"
+  src="/viz/oom-sim.html"
   loading="lazy">
 </iframe>
 

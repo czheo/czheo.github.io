@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geometry Fun! 🎨</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+    background: #fff9f0;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* TOP BAR */
+  #topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #fff;
+    border-bottom: 3px solid #ffe0a0;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  #title {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #e06030;
+    margin-right: 10px;
+  }
+
+  .tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 14px;
+    border: 3px solid #ccc;
+    border-radius: 16px;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.75em;
+    font-weight: bold;
+    color: #555;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .tool-btn .icon { font-size: 1.6em; }
+  .tool-btn:hover { transform: scale(1.08); }
+  .tool-btn.active {
+    border-color: #e06030;
+    background: #fff3e0;
+    color: #e06030;
+  }
+
+  #clear-btn {
+    margin-left: auto;
+    padding: 8px 18px;
+    border: 3px solid #f08080;
+    border-radius: 16px;
+    background: #fff0f0;
+    color: #c04040;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.8em;
+    font-weight: bold;
+    transition: all 0.15s;
+  }
+  #clear-btn:hover { background: #ffd0d0; transform: scale(1.05); }
+
+  /* BUBBLE */
+  #bubble {
+    background: #fffbe6;
+    border: 3px solid #ffd060;
+    border-radius: 20px;
+    padding: 10px 18px;
+    font-size: 1em;
+    color: #664400;
+    max-width: 340px;
+    line-height: 1.4;
+    position: relative;
+    transition: all 0.3s;
+  }
+  #bubble::before {
+    content: '🦊';
+    position: absolute;
+    left: -38px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.8em;
+  }
+  #bubble-wrap {
+    padding: 6px 16px 6px 50px;
+    flex-shrink: 0;
+  }
+
+  /* CANVAS AREA */
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+
+  /* LABELS */
+  .label {
+    position: absolute;
+    font-size: 1em;
+    font-weight: bold;
+    pointer-events: none;
+    text-shadow: 0 0 4px #fff, 0 0 4px #fff;
+    transform: translate(-50%, -130%);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div id="title">🔷 Geometry Fun!</div>
+
+    <button class="tool-btn active" id="btn-dot" onclick="setTool('dot')">
+      <span class="icon">⚫</span>
+      <span>DOT<br>(Point)</span>
+    </button>
+
+    <button class="tool-btn" id="btn-line" onclick="setTool('line')">
+      <span class="icon">📏</span>
+      <span>LINE</span>
+    </button>
+
+    <button class="tool-btn" id="btn-ray" onclick="setTool('ray')">
+      <span class="icon">➡️</span>
+      <span>RAY</span>
+    </button>
+
+    <button class="tool-btn" id="btn-segment" onclick="setTool('segment')">
+      <span class="icon">✂️</span>
+      <span>SEGMENT</span>
+    </button>
+
+    <button class="tool-btn" id="btn-collinear" onclick="setTool('collinear')">
+      <span class="icon">📐</span>
+      <span>COLLINEAR?</span>
+    </button>
+
+    <button class="tool-btn" id="btn-intersect" onclick="setTool('intersect')">
+      <span class="icon">✖️</span>
+      <span>INTERSECT</span>
+    </button>
+
+    <button id="clear-btn" onclick="clearAll()">🗑️ Clear</button>
+  </div>
+
+  <!-- FOX BUBBLE -->
+  <div id="bubble-wrap">
+    <div id="bubble">Tap anywhere to place a <b>DOT</b>! A dot is just a tiny spot — like a star in the sky! ⭐</div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+  </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvas-wrap');
+
+// ── State ──────────────────────────────────────────────────────────────
+let tool = 'dot';
+let points = [];       // {x,y,label,color}
+let lines  = [];       // {ax,ay,bx,by, type:'line'|'ray'|'segment', color}
+let lineStart = null;  // first click for multi-click tools
+let collinearPts = [];     // up to 3 points for collinear check
+let collinearResult = null; // null | 'yes' | 'no'
+let intersectLines = [];   // [{ax,ay,bx,by,color}, ...] up to 2
+let intersectPt = null;    // {x,y} | 'parallel'
+const COLORS = ['#e05020','#2070e0','#20a040','#9030c0','#d08000','#c02060'];
+let colorIdx = 0;
+
+const LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+let labelIdx = 0;
+
+// ── Resize ─────────────────────────────────────────────────────────────
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+window.addEventListener('resize', resize);
+
+// ── Tool select ────────────────────────────────────────────────────────
+const messages = {
+  dot: "Tap anywhere to place a <b>DOT</b>! A dot is just a tiny spot — like a star in the sky! ⭐",
+  line: "Click two dots — I'll draw a <b>LINE</b> that goes on <b>forever</b> in both directions! 🚀",
+  ray: "Click two dots — a <b>RAY</b> starts at the first dot and zooms off forever! ☀️",
+  segment: "Click two dots — a <b>SEGMENT</b> is a line with a start AND an end! ✂️",
+  collinear:  "Place <b>3 dots</b>! I'll check if they're <b>collinear</b> — do they all sit on the same line? 🤔",
+  intersect:  "Draw <b>Line 1</b>: click two spots! Then draw <b>Line 2</b> and see where they meet! ✖️"
+};
+
+function setTool(t) {
+  tool = t;
+  lineStart = null;
+  if (t === 'intersect') { intersectLines = []; intersectPt = null; }
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + t).classList.add('active');
+  document.getElementById('bubble').innerHTML = messages[t];
+  draw();
+}
+
+// ── Canvas coords ──────────────────────────────────────────────────────
+function getXY(e) {
+  const r = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - r.left, y: src.clientY - r.top };
+}
+
+// ── Click handler ──────────────────────────────────────────────────────
+function handleClick(e) {
+  e.preventDefault();
+  const pos = getXY(e);
+  const color = COLORS[colorIdx % COLORS.length];
+
+  if (tool === 'dot') {
+    const label = LABELS[labelIdx % LABELS.length];
+    points.push({ x: pos.x, y: pos.y, label, color });
+    labelIdx++;
+    colorIdx++;
+    celebrate(pos.x, pos.y);
+    speak(`dot`);
+    draw();
+    return;
+  }
+
+  if (tool === 'collinear') {
+    if (collinearPts.length >= 3) {
+      // reset for a fresh attempt
+      collinearPts = [];
+      collinearResult = null;
+    }
+    let cx = pos.x, cy = pos.y;
+    if (collinearPts.length === 2) {
+      // snap onto line AB only if click is within 30px of it
+      const A = collinearPts[0], B = collinearPts[1];
+      const dx = B.x - A.x, dy = B.y - A.y;
+      const lenSq = dx * dx + dy * dy || 1;
+      const t = ((cx - A.x) * dx + (cy - A.y) * dy) / lenSq;
+      const projX = A.x + t * dx, projY = A.y + t * dy;
+      const dist = Math.hypot(cx - projX, cy - projY);
+      if (dist < 30) { cx = projX; cy = projY; }
+    }
+    collinearPts.push({ x: cx, y: cy, label: LABELS[collinearPts.length], color });
+    celebrate(pos.x, pos.y);
+
+    if (collinearPts.length < 3) {
+      const need = 3 - collinearPts.length;
+      document.getElementById('bubble').innerHTML =
+        `Nice dot! Place <b>${need} more</b> dot${need > 1 ? 's' : ''}! 🎯`;
+    } else {
+      // Check collinearity: area of triangle = 0?
+      const [A, B, C] = collinearPts;
+      const area = (B.x - A.x) * (C.y - A.y) - (C.x - A.x) * (B.y - A.y);
+      const abLen = Math.hypot(B.x - A.x, B.y - A.y) || 1;
+      const distC = Math.abs(area) / abLen; // perpendicular pixel distance from C to line AB
+      const isCollinear = distC < 20; // 20px tolerance
+      collinearResult = isCollinear ? 'yes' : 'no';
+      if (isCollinear) {
+        document.getElementById('bubble').innerHTML =
+          `🎉 YES! All 3 dots sit on the <b>same line</b> — they are <b>COLLINEAR</b>! Like beads on a string! 🪡`;
+      } else {
+        document.getElementById('bubble').innerHTML =
+          `Nope! 😄 The dots are <b>NOT collinear</b> — they make a <b>triangle</b>! They don't all fit on one line! 🔺`;
+      }
+    }
+    draw();
+    return;
+  }
+
+  if (tool === 'intersect') {
+    if (intersectLines.length >= 2) {
+      // reset for a fresh pair
+      intersectLines = []; intersectPt = null; lineStart = null;
+    }
+    if (!lineStart) {
+      lineStart = { ...pos, color };
+      const which = intersectLines.length === 0 ? 'first' : 'second';
+      document.getElementById('bubble').innerHTML =
+        `Good! Now click a <b>second spot</b> to finish the ${which} line! 🎯`;
+      draw();
+    } else {
+      const newLine = { ax: lineStart.x, ay: lineStart.y, bx: pos.x, by: pos.y, color };
+      intersectLines.push(newLine);
+      lineStart = null;
+      colorIdx++;
+
+      if (intersectLines.length === 1) {
+        document.getElementById('bubble').innerHTML =
+          `Nice line! Now draw <b>Line 2</b> — click two more spots! ✏️`;
+      } else {
+        // compute intersection
+        const [L1, L2] = intersectLines;
+        const d1x = L1.bx - L1.ax, d1y = L1.by - L1.ay;
+        const d2x = L2.bx - L2.ax, d2y = L2.by - L2.ay;
+        const denom = d1x * d2y - d1y * d2x;
+        if (Math.abs(denom) < 0.001) {
+          intersectPt = 'parallel';
+          document.getElementById('bubble').innerHTML =
+            `😮 These lines are <b>PARALLEL</b> — they never meet! They run side by side forever! 🛤️🛤️`;
+        } else {
+          const t = ((L2.ax - L1.ax) * d2y - (L2.ay - L1.ay) * d2x) / denom;
+          intersectPt = { x: L1.ax + t * d1x, y: L1.ay + t * d1y };
+          celebrate(intersectPt.x, intersectPt.y);
+          document.getElementById('bubble').innerHTML =
+            `✖️ <b>INTERSECT!</b> The lines cross at exactly <b>ONE point</b> — like two roads meeting! 🛣️`;
+        }
+      }
+      draw();
+    }
+    return;
+  }
+
+  // line / ray / segment — needs 2 clicks
+  if (!lineStart) {
+    lineStart = { ...pos, color };
+    document.getElementById('bubble').innerHTML =
+      `Good! Now click a <b>second spot</b> to finish the ${tool}! 🎯`;
+    draw();
+  } else {
+    lines.push({ ax: lineStart.x, ay: lineStart.y, bx: pos.x, by: pos.y,
+                 type: tool, color });
+    celebrate(pos.x, pos.y);
+    speak(tool);
+    lineStart = null;
+    colorIdx++;
+    draw();
+    setTimeout(() => {
+      document.getElementById('bubble').innerHTML = messages[tool];
+    }, 2200);
+  }
+}
+
+canvas.addEventListener('click', handleClick);
+canvas.addEventListener('touchstart', handleClick, { passive: false });
+
+// ── Praise ────────────────────────────────────────────────────────────
+const praises = ["Great job! 🎉","Woohoo! 🥳","You did it! ⭐","Amazing! 🌟","Super! 🦄"];
+let praiseIdx = 0;
+
+function speak(type) {
+  const msgs = {
+    dot: [`A <b>DOT</b> is a tiny point — it has NO size, just a place! 📍`,
+          `Dots are the building blocks of ALL shapes! 🏗️`,
+          `Every shape starts with dots (points)! ✨`],
+    line: [`A <b>LINE</b> goes on forever — both ways! It never stops! 🚀🚀`,
+           `Two points make exactly ONE line! 🤯`,
+           `Lines have NO endpoints — they zoom off forever! ♾️`],
+    ray: [`A <b>RAY</b> starts at the first dot and never stops going! ☀️`,
+          `Sunshine is like a ray — it starts at the sun and goes forever! 🌞`,
+          `A ray has ONE end (the start dot) and zooms forever the other way! ➡️`],
+    segment: [`A <b>SEGMENT</b> has TWO ends — it starts AND stops! ✂️`,
+              `The edge of this screen is a segment! 📱`,
+              `Segments have a length you can measure! 📏`]
+  };
+  const pool = msgs[type];
+  const text = pool[Math.floor(Math.random() * pool.length)];
+  document.getElementById('bubble').innerHTML =
+    praises[praiseIdx % praises.length] + ' ' + text;
+  praiseIdx++;
+}
+
+// ── Particles ─────────────────────────────────────────────────────────
+let particles = [];
+function celebrate(x, y) {
+  for (let i = 0; i < 14; i++) {
+    const angle = (Math.PI * 2 * i) / 14;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * (2 + Math.random() * 3),
+      vy: Math.sin(angle) * (2 + Math.random() * 3),
+      r: 4 + Math.random() * 5,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      life: 1
+    });
+  }
+  animateParticles();
+}
+let animating = false;
+function animateParticles() {
+  if (animating) return;
+  animating = true;
+  function step() {
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      p.vy += 0.15;
+      p.life -= 0.03;
+    });
+    particles = particles.filter(p => p.life > 0);
+    draw();
+    if (particles.length > 0) requestAnimationFrame(step);
+    else animating = false;
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Draw ──────────────────────────────────────────────────────────────
+function draw() {
+  const W = canvas.width  / (window.devicePixelRatio || 1);
+  const H = canvas.height / (window.devicePixelRatio || 1);
+  ctx.clearRect(0, 0, W, H);
+
+  // grid (faint)
+  ctx.strokeStyle = '#f0e8d8';
+  ctx.lineWidth = 1;
+  const step = 40;
+  for (let x = 0; x < W; x += step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // lines
+  lines.forEach(l => drawShape(l, W, H));
+
+  // line-in-progress
+  if (lineStart) {
+    ctx.setLineDash([8, 6]);
+    ctx.strokeStyle = lineStart.color + '80';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(lineStart.x, lineStart.y);
+    // draw to last mouse pos (we track it)
+    ctx.lineTo(mouseX ?? lineStart.x, mouseY ?? lineStart.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // start dot pulse
+    drawDot(lineStart.x, lineStart.y, lineStart.color, '?', true);
+  }
+
+  // collinear mode visuals
+  if (collinearPts.length > 0) {
+    // draw the collinear test line through first two pts (extended)
+    if (collinearPts.length >= 2) {
+      const A = collinearPts[0], B = collinearPts[1];
+      const dx = B.x - A.x, dy = B.y - A.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len, uy = dy / len;
+      const BIG = Math.max(W, H) * 2;
+      const lineColor = collinearResult === 'yes' ? '#20b040'
+                      : collinearResult === 'no'  ? '#e02020'
+                      : '#aaaaaa';
+      ctx.setLineDash(collinearResult ? [] : [10, 8]);
+      ctx.strokeStyle = lineColor + 'aa';
+      ctx.lineWidth = collinearResult ? 5 : 3;
+      ctx.beginPath();
+      ctx.moveTo(A.x - ux * BIG, A.y - uy * BIG);
+      ctx.lineTo(A.x + ux * BIG, A.y + uy * BIG);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // if result=yes draw a green glow band behind all 3 dots
+      if (collinearResult === 'yes') {
+        ctx.strokeStyle = '#80ff9060';
+        ctx.lineWidth = 22;
+        ctx.beginPath();
+        ctx.moveTo(A.x - ux * BIG, A.y - uy * BIG);
+        ctx.lineTo(A.x + ux * BIG, A.y + uy * BIG);
+        ctx.stroke();
+      }
+    }
+
+    // draw the collinear dots
+    collinearPts.forEach((p, i) => {
+      const dotColor = collinearResult === 'yes' ? '#20b040'
+                     : collinearResult === 'no'  ? '#e02020'
+                     : COLORS[i % COLORS.length];
+      drawDot(p.x, p.y, dotColor, p.label, collinearPts.length < 3 && i === collinearPts.length - 1);
+    });
+
+    // if not collinear, shade the triangle
+    if (collinearResult === 'no' && collinearPts.length === 3) {
+      ctx.fillStyle = '#ff606030';
+      ctx.beginPath();
+      ctx.moveTo(collinearPts[0].x, collinearPts[0].y);
+      ctx.lineTo(collinearPts[1].x, collinearPts[1].y);
+      ctx.lineTo(collinearPts[2].x, collinearPts[2].y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#e0202080';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
+  // intersect mode visuals
+  if (intersectLines.length > 0) {
+    intersectLines.forEach(l => drawShape({ ...l, type: 'line' }, W, H));
+    if (intersectPt && intersectPt !== 'parallel') {
+      // pulsing star at intersection
+      ctx.shadowColor = '#ffcc00';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = '#ffcc00';
+      ctx.beginPath();
+      ctx.arc(intersectPt.x, intersectPt.y, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(intersectPt.x, intersectPt.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      // label
+      ctx.fillStyle = '#cc8800';
+      ctx.font = 'bold 15px "Comic Sans MS", cursive';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('✖ meet here!', intersectPt.x, intersectPt.y - 16);
+    }
+    if (intersectPt === 'parallel') {
+      // draw a "no crossing" badge in the center
+      const mx = (intersectLines[0].ax + intersectLines[0].bx + intersectLines[1].ax + intersectLines[1].bx) / 4;
+      const my = (intersectLines[0].ay + intersectLines[0].by + intersectLines[1].ay + intersectLines[1].by) / 4;
+      ctx.fillStyle = '#fff0f0ee';
+      ctx.strokeStyle = '#e02020';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(mx - 70, my - 22, 140, 44, 14);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#c00000';
+      ctx.font = 'bold 15px "Comic Sans MS", cursive';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🛤️ PARALLEL — never meet!', mx, my);
+    }
+  }
+
+  // points
+  points.forEach(p => drawDot(p.x, p.y, p.color, p.label, false));
+
+  // particles
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawDot(x, y, color, label, pulse) {
+  const r = 11;
+  // glow
+  ctx.shadowColor = color;
+  ctx.shadowBlur = pulse ? 18 : 8;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // white center
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.fill();
+  // label
+  ctx.fillStyle = color;
+  ctx.font = 'bold 16px "Comic Sans MS", cursive';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(label, x, y - 13);
+}
+
+function drawShape(l, W, H) {
+  const dx = l.bx - l.ax, dy = l.by - l.ay;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  const BIG = Math.max(W, H) * 2;
+
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = l.color;
+  ctx.lineCap = 'round';
+
+  // arrowhead helper
+  const arrow = (tx, ty, dirx, diry) => {
+    const sz = 14;
+    ctx.fillStyle = l.color;
+    ctx.beginPath();
+    ctx.moveTo(tx + dirx * sz, ty + diry * sz);
+    ctx.lineTo(tx - diry * sz * 0.5, ty + dirx * sz * 0.5);
+    ctx.lineTo(tx + diry * sz * 0.5, ty - dirx * sz * 0.5);
+    ctx.closePath();
+    ctx.fill();
+  };
+
+  if (l.type === 'segment') {
+    ctx.beginPath();
+    ctx.moveTo(l.ax, l.ay);
+    ctx.lineTo(l.bx, l.by);
+    ctx.stroke();
+    // end caps (square stops)
+    ctx.fillStyle = l.color;
+    [[l.ax, l.ay],[l.bx, l.by]].forEach(([x,y]) => {
+      ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fill();
+    });
+  } else if (l.type === 'ray') {
+    const ex = l.ax + ux * BIG, ey = l.ay + uy * BIG;
+    ctx.beginPath();
+    ctx.moveTo(l.ax, l.ay);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    // start dot
+    ctx.fillStyle = l.color;
+    ctx.beginPath(); ctx.arc(l.ax, l.ay, 6, 0, Math.PI*2); ctx.fill();
+    // arrow at end
+    arrow(l.ax + ux * (BIG * 0.6), l.ay + uy * (BIG * 0.6), ux, uy);
+  } else {
+    // full line
+    const sx = l.ax - ux * BIG, sy = l.ay - uy * BIG;
+    const ex = l.ax + ux * BIG, ey = l.ay + uy * BIG;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    arrow(l.ax + ux * (BIG * 0.6), l.ay + uy * (BIG * 0.6),  ux,  uy);
+    arrow(l.ax - ux * (BIG * 0.6), l.ay - uy * (BIG * 0.6), -ux, -uy);
+  }
+}
+
+// ── Mouse tracking for live preview ───────────────────────────────────
+let mouseX = null, mouseY = null;
+canvas.addEventListener('mousemove', e => {
+  if (!lineStart) return;
+  const pos = getXY(e);
+  mouseX = pos.x; mouseY = pos.y;
+  draw();
+});
+
+// ── Clear ─────────────────────────────────────────────────────────────
+function clearAll() {
+  points = []; lines = []; lineStart = null;
+  collinearPts = []; collinearResult = null;
+  intersectLines = []; intersectPt = null;
+  labelIdx = 0; colorIdx = 0;
+  document.getElementById('bubble').innerHTML = messages[tool];
+  draw();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+resize();
+</script>
+</body>
+</html>

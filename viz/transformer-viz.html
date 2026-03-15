@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decoder-Only Transformer Architecture</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  h1 { font-size: 1.6rem; font-weight: 600; margin-bottom: 8px; color: #fff; letter-spacing: -0.3px; }
+  .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 40px; }
+
+  .layout {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  /* ---- DIAGRAM ---- */
+  .diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 260px;
+  }
+
+  .block {
+    position: relative;
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 2px solid transparent;
+    user-select: none;
+    line-height: 1.3;
+  }
+  .block:hover { filter: brightness(1.15); transform: scale(1.02); }
+  .block.active { border-color: #fff; filter: brightness(1.2); transform: scale(1.02); }
+  .block-label { font-size: 0.72rem; opacity: 0.7; margin-top: 3px; font-weight: 400; }
+
+  .b-input   { background: #1e2a3a; color: #7ec8e3; }
+  .b-embed   { background: #1a2a1a; color: #80e080; }
+  .b-attn    { background: #2a1a2a; color: #d4a0ff; }
+  .b-norm    { background: #1e1e2a; color: #a0b4ff; }
+  .b-ffn     { background: #2a1e1a; color: #ffb07c; }
+  .b-output  { background: #2a2a1a; color: #ffe080; }
+  .b-softmax { background: #1a2a2a; color: #80ffe0; }
+
+  .tblock-wrapper {
+    width: 100%;
+    border: 1.5px dashed #444;
+    border-radius: 14px;
+    padding: 10px 8px;
+    position: relative;
+    margin: 4px 0;
+  }
+  .tblock-label {
+    position: absolute;
+    top: -11px; left: 50%;
+    transform: translateX(-50%);
+    background: #0f1117;
+    padding: 0 8px;
+    font-size: 0.72rem;
+    color: #888;
+    white-space: nowrap;
+  }
+  .tblock-inner { display: flex; flex-direction: column; align-items: center; }
+
+  .arrow {
+    width: 2px; height: 18px;
+    background: #444; margin: 0 auto;
+    position: relative; flex-shrink: 0;
+  }
+  .arrow::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid #444;
+  }
+  .arrow-sm {
+    width: 2px; height: 12px;
+    background: #444; margin: 0 auto;
+    position: relative; flex-shrink: 0;
+  }
+  .arrow-sm::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 50%;
+    transform: translateX(-50%);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid #444;
+  }
+
+  .residual-group {
+    position: relative; width: 100%;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .residual-line {
+    position: absolute;
+    left: -2px; top: 0; bottom: 0;
+    width: 3px;
+    background: #555;
+    border-radius: 2px;
+  }
+
+  .n-badge {
+    display: inline-block;
+    background: #333; color: #aaa;
+    border-radius: 6px; font-size: 0.72rem;
+    padding: 1px 7px; margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* ---- DESCRIPTION PANEL ---- */
+  .desc-panel {
+    flex: 1;
+    min-width: 0;
+    position: sticky;
+    top: 40px;
+  }
+
+  .desc-card {
+    background: #181c24;
+    border: 1.5px solid #2a2f3e;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .tab-bar {
+    display: flex;
+    border-bottom: 1.5px solid #2a2f3e;
+    background: #13161e;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 12px 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.2px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1.5px;
+  }
+  .tab-btn:hover { color: #aaa; }
+  .tab-btn.active { color: #fff; border-bottom-color: #7a9fff; }
+  .tab-code-label {
+    font-size: 0.68rem;
+    font-family: 'Courier New', monospace;
+    display: block;
+    opacity: 0.6;
+    margin-top: 1px;
+  }
+
+  .card-header { padding: 20px 24px 0; }
+  .desc-title { font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 6px; }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.68rem; padding: 2px 8px;
+    border-radius: 20px; font-weight: 600;
+  }
+  .tag-input   { background: #1e2a3a; color: #7ec8e3; }
+  .tag-embed   { background: #1a2a1a; color: #80e080; }
+  .tag-attn    { background: #2a1a2a; color: #d4a0ff; }
+  .tag-norm    { background: #1e1e2a; color: #a0b4ff; }
+  .tag-ffn     { background: #2a1e1a; color: #ffb07c; }
+  .tag-output  { background: #2a2a1a; color: #ffe080; }
+  .tag-softmax { background: #1a2a2a; color: #80ffe0; }
+
+  .tab-content {
+    padding: 18px 24px 24px;
+    max-height: 68vh;
+    overflow-y: auto;
+  }
+  .tab-content::-webkit-scrollbar { width: 6px; }
+  .tab-content::-webkit-scrollbar-track { background: transparent; }
+  .tab-content::-webkit-scrollbar-thumb { background: #2a2f3e; border-radius: 3px; }
+
+  /* Intuition */
+  .intuition { font-size: 0.88rem; line-height: 1.75; color: #ccc; }
+  .intuition p { margin-bottom: 12px; }
+  .intuition ul { padding-left: 18px; margin-bottom: 12px; }
+  .intuition li { margin-bottom: 6px; }
+  .intuition strong { color: #e8e8e8; }
+
+  /* Math */
+  .math-section { font-size: 0.88rem; line-height: 1.75; color: #ccc; }
+  .math-section p { margin-bottom: 10px; }
+  .math-section h4 {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 18px 0 8px;
+    font-weight: 600;
+  }
+  .math-section h4:first-child { margin-top: 4px; }
+  .math-section ul, .math-section ol { padding-left: 18px; margin-bottom: 10px; }
+  .math-section li { margin-bottom: 5px; }
+
+  .math-block {
+    background: #0d1117;
+    border: 1px solid #2a2f3e;
+    border-left: 3px solid #7a9fff;
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin: 10px 0;
+    text-align: center;
+    overflow-x: auto;
+    color: #e0e0e0;
+  }
+  /* KaTeX display overrides for dark theme */
+  .math-block .katex-display { margin: 0.3em 0; }
+  .math-block .katex { font-size: 1.05em; }
+  .katex { color: #e0e0e0; }
+  .katex .mord, .katex .mbin, .katex .mrel { color: #e0e0e0; }
+
+  /* Code */
+  .code-pane pre { margin: 0; border-radius: 8px; font-size: 0.8rem; line-height: 1.6; }
+  .code-pane .hljs {
+    background: #0d1117;
+    border: 1px solid #2a2f3e;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .code-note { font-size: 0.78rem; color: #666; margin-bottom: 10px; line-height: 1.5; }
+
+  .hint { color: #555; font-size: 0.82rem; text-align: center; padding: 80px 24px; line-height: 1.6; }
+
+  /* Mini attention viz */
+  .attn-viz { display: flex; gap: 6px; justify-content: center; margin: 14px 0; align-items: flex-end; }
+  .attn-col { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .attn-token { font-size: 0.7rem; color: #888; padding: 3px 6px; border-radius: 4px; border: 1px solid #333; background: #1a1a2a; white-space: nowrap; }
+  .attn-bar { width: 28px; background: #d4a0ff; border-radius: 3px 3px 0 0; }
+  .attn-label { font-size: 0.65rem; color: #666; }
+
+  .flow-dots { display: flex; justify-content: center; gap: 4px; margin: 8px 0; }
+  .flow-dot { width: 6px; height: 6px; border-radius: 50%; background: #333; animation: pulse 1.4s infinite ease-in-out; }
+  .flow-dot:nth-child(2) { animation-delay: 0.2s; }
+  .flow-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%, 100% { background: #333; } 50% { background: #666; } }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  .desc-card.animating { animation: fadeIn 0.22s ease forwards; }
+
+  /* ---- VISUALIZE TAB ---- */
+  .viz-toggle-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .viz-tog {
+    padding: 6px 18px; border-radius: 6px;
+    border: 1.5px solid #333; background: #131720;
+    color: #666; cursor: pointer; font-size: 0.82rem;
+    transition: all 0.15s;
+  }
+  .viz-tog:hover { color: #aaa; border-color: #555; }
+  .viz-tog.active { background: #1e2540; color: #a0b4ff; border-color: #7a9fff; }
+
+  .viz-note { font-size: 0.83rem; color: #999; line-height: 1.65; margin-bottom: 14px; }
+  .viz-sublabel {
+    font-size: 0.7rem; color: #666;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .viz-colorbar { display: flex; flex-direction: column; align-items: center; margin-top: 5px; gap: 3px; }
+  .colorbar-grad { width: 180px; height: 7px; border-radius: 4px; background: linear-gradient(to right, #3050b0, #1a1f2a 50%, #c07030); }
+  .colorbar-labels { width: 180px; display: flex; justify-content: space-between; font-size: 0.7rem; color: #555; }
+
+  .rope-controls {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px; font-size: 0.83rem; color: #aaa; flex-wrap: wrap;
+  }
+  .rope-dim-note { font-size: 0.72rem; color: #555; }
+  .rope-panels { display: flex; gap: 16px; align-items: flex-start; }
+  .rope-right { flex: 1; min-width: 0; }
+
+  input[type=range] {
+    -webkit-appearance: none; height: 4px; border-radius: 2px;
+    background: #2a3040; outline: none; cursor: pointer; width: 130px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 13px; height: 13px;
+    border-radius: 50%; background: #7a9fff; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Decoder-Only Transformer</h1>
+<p class="subtitle">Click any component to explore it</p>
+
+<div class="layout">
+
+  <!-- DIAGRAM -->
+  <div class="diagram">
+    <div class="block b-input" onclick="show('input')" id="blk-input">
+      Token IDs
+      <div class="block-label">["The", "cat", "sat"] → [1423, 812, 991]</div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="block b-embed" onclick="show('embed')" id="blk-embed">
+      Token + Positional Embedding
+      <div class="block-label">integer IDs → dense vectors</div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="tblock-wrapper">
+      <div class="tblock-label">Transformer Block <span class="n-badge">× N</span></div>
+      <div class="tblock-inner">
+        <div class="residual-group">
+          <div class="residual-line"></div>
+          <div class="block b-attn" onclick="show('attn')" id="blk-attn" style="width:100%">
+            Masked Self-Attention
+            <div class="block-label">multi-head, causal</div>
+          </div>
+          <div class="arrow-sm"></div>
+          <div class="block b-norm" onclick="show('norm1')" id="blk-norm1" style="width:100%">
+            Add &amp; Norm
+            <div class="block-label">residual + layer normalization</div>
+          </div>
+        </div>
+        <div class="arrow-sm"></div>
+        <div class="residual-group">
+          <div class="residual-line"></div>
+          <div class="block b-ffn" onclick="show('ffn')" id="blk-ffn" style="width:100%">
+            Feed-Forward Network
+            <div class="block-label">Linear → GELU → Linear</div>
+          </div>
+          <div class="arrow-sm"></div>
+          <div class="block b-norm" onclick="show('norm2')" id="blk-norm2" style="width:100%">
+            Add &amp; Norm
+            <div class="block-label">residual + layer normalization</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+    <div class="block b-output" onclick="show('output')" id="blk-output">
+      Linear Projection
+      <div class="block-label">hidden dim → vocabulary size</div>
+    </div>
+    <div class="arrow"></div>
+    <div class="block b-softmax" onclick="show('softmax')" id="blk-softmax">
+      Softmax + Sample
+      <div class="block-label">next token probabilities</div>
+    </div>
+  </div>
+
+  <!-- DESCRIPTION PANEL -->
+  <div class="desc-panel">
+    <div class="desc-card" id="desc-card">
+      <div class="hint">&larr; Click any component in the diagram to explore it</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const descriptions = {
+
+  input: {
+    title: "Token IDs",
+    tag: "tag-input", tagLabel: "Input",
+    intuition: `
+      <p>Neural networks speak numbers — but text is characters and words. The first challenge is bridging that gap.</p>
+      <p>A <strong>tokenizer</strong> splits raw text into chunks called <em>tokens</em> (usually subwords, not full words), then maps each token to an integer ID from a fixed vocabulary. The vocabulary is built once from a large corpus before training, and never changes afterward.</p>
+      <p>Why subwords and not individual characters? Characters give tiny vocabularies but long sequences — "unhappy" is 7 tokens. Full words give short sequences but massive vocabularies and can't handle typos or new words. Subwords are the sweet spot: "unhappily" → ["un", "happ", "ily"] — compact sequences, finite vocabulary, handles everything.</p>
+      <p>Why not just use Unicode code points? Too granular — the model would have to learn to compose characters into meaning from scratch, wasting enormous capacity.</p>
+      <p>The two dominant algorithms are <strong>BPE</strong> (Byte Pair Encoding, used by GPT) and <strong>WordPiece</strong> (used by BERT). Both iteratively merge the most frequent pairs of symbols until the target vocabulary size is reached.</p>
+    `,
+    math: `
+      <h4>Vocabulary & Mapping</h4>
+      <p>Define a vocabulary $\\mathcal{V}$ of size $|\\mathcal{V}|$ (typically 32k–100k). The tokenizer is a deterministic function mapping a string to a sequence of integer IDs:</p>
+      <div class="math-block">$$\\tau : \\text{String} \\to \\mathbb{Z}^T$$</div>
+      <p>where $T$ is the sequence length after tokenization.</p>
+
+      <h4>BPE Algorithm</h4>
+      <p>Initialize $\\mathcal{V}$ with all individual bytes. Repeat until $|\\mathcal{V}|$ reaches target size:</p>
+      <ol>
+        <li>Count frequency of all adjacent pairs $(a, b)$ in corpus</li>
+        <li>Find the most frequent pair $(a^*, b^*)$</li>
+        <li>Merge: replace all occurrences of $(a^*, b^*)$ with a new token $[a^* b^*]$, add it to $\\mathcal{V}$</li>
+      </ol>
+
+      <h4>Result</h4>
+      <div class="math-block">$$\\texttt{"The cat sat"} \\xrightarrow{\\tau} [1423,\\ 812,\\ 991] \\in \\mathbb{Z}^3$$</div>
+    `,
+    jax: `
+      <div class="code-note">In practice, use a pretrained tokenizer (tiktoken for GPT, SentencePiece for LLaMA). JAX handles the downstream numeric processing.</div>
+      <pre><code class="language-python">import jax.numpy as jnp
+
+# tiktoken is the tokenizer used by GPT models
+import tiktoken
+
+enc = tiktoken.get_encoding("gpt2")  # 50,257 token vocab
+
+text = "The cat sat on the mat"
+token_ids = enc.encode(text)
+# [464, 3797, 3332, 319, 262, 2603]
+
+# Convert to JAX array for downstream processing
+ids = jnp.array(token_ids, dtype=jnp.int32)
+# shape: (6,)
+
+# Decode back to text
+reconstructed = enc.decode(token_ids)
+# "The cat sat on the mat"
+</code></pre>`,
+    pytorch: `
+      <div class="code-note">Same tokenizer libraries work with PyTorch. HuggingFace tokenizers integrate tightly with PyTorch tensors.</div>
+      <pre><code class="language-python">import torch
+from transformers import GPT2Tokenizer
+
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+
+text = "The cat sat on the mat"
+token_ids = tokenizer.encode(text, return_tensors="pt")
+# tensor([[  464,  3797,  3332,   319,   262,  2603]])
+# shape: (1, 6) — batch dimension added
+
+# Or without batch dim:
+ids = torch.tensor(tokenizer.encode(text))
+# shape: (6,)
+
+# Decode back
+reconstructed = tokenizer.decode(ids.tolist())
+# "The cat sat on the mat"
+</code></pre>`
+  },
+
+  embed: {
+    title: "Token + Positional Embedding",
+    tag: "tag-embed", tagLabel: "Embedding",
+    intuition: `
+      <p>Token IDs are arbitrary integers — the model has no way to know that ID 1423 is semantically related to ID 1424. We need to map each ID to a point in a <strong>continuous vector space</strong> where similar meanings live nearby.</p>
+      <p>That's what the <strong>token embedding matrix</strong> does: it's a learnable lookup table with one row per vocabulary entry. During training, semantically related tokens are nudged toward each other through gradient descent. The result is a geometry where "king" - "man" + "woman" ≈ "queen".</p>
+      <p>But there's a problem: the attention mechanism is <strong>permutation-invariant</strong>. If you shuffle the input tokens, the attention scores are the same — the model has no notion of order. "cat sat the" and "the cat sat" would be treated identically.</p>
+      <p>To fix this, we add <strong>positional embeddings</strong> to inject order information. Each position gets a unique vector that is added to the token vector before entering the model.</p>
+      <p>The original paper used fixed sinusoidal functions. GPT-2 uses a learned lookup table. Modern models (LLaMA, Mistral) use <strong>RoPE</strong> (Rotary Position Embeddings), which encodes position by rotating the Q and K vectors inside attention rather than adding to inputs — giving better generalization to longer sequences.</p>
+    `,
+    math: `
+      <h4>Token Embedding</h4>
+      <p>Learnable matrix $E \\in \\mathbb{R}^{|\\mathcal{V}| \\times d_{\\text{model}}}$. Each token ID is a row lookup:</p>
+      <div class="math-block">$$\\text{tok\\_emb}(i) = E[\\text{id}_i] \\in \\mathbb{R}^{d_{\\text{model}}}$$</div>
+
+      <h4>Positional Embedding (Learned)</h4>
+      <p>Learnable matrix $P \\in \\mathbb{R}^{L_{\\max} \\times d_{\\text{model}}}$, one vector per position:</p>
+      <div class="math-block">$$\\text{pos\\_emb}(i) = P[i] \\in \\mathbb{R}^{d_{\\text{model}}}$$</div>
+
+      <h4>Sinusoidal (Original Transformer)</h4>
+      <p>Fixed, not learned. Different frequencies encode position at different scales:</p>
+      <div class="math-block">$$PE(\\text{pos},\\ 2i) = \\sin\\!\\left(\\frac{\\text{pos}}{10000^{2i/d_{\\text{model}}}}\\right)$$
+$$PE(\\text{pos},\\ 2i+1) = \\cos\\!\\left(\\frac{\\text{pos}}{10000^{2i/d_{\\text{model}}}}\\right)$$</div>
+
+      <h4>Combined Input to Transformer</h4>
+      <div class="math-block">$$\\mathbf{x}_i = E[\\text{id}_i] + P[i]$$
+$$X = [\\mathbf{x}_1,\\ \\ldots,\\ \\mathbf{x}_T]^\\top \\in \\mathbb{R}^{T \\times d_{\\text{model}}}$$</div>
+    `,
+    jax: `
+      <pre><code class="language-python">import jax.numpy as jnp
+import flax.linen as nn
+
+class Embedding(nn.Module):
+    vocab_size: int
+    d_model: int
+    max_len: int
+    dropout: float = 0.0
+
+    @nn.compact
+    def __call__(self, token_ids, training=False):
+        # token_ids shape: (batch, seq_len)
+        B, T = token_ids.shape
+
+        # Token embedding: lookup table (vocab_size, d_model)
+        tok_emb = nn.Embed(self.vocab_size, self.d_model)(token_ids)
+
+        # Positional embedding: learned per-position vectors
+        positions = jnp.arange(T)[None, :]  # (1, T)
+        pos_emb = nn.Embed(self.max_len, self.d_model)(positions)
+
+        x = tok_emb + pos_emb  # (B, T, d_model)
+        return nn.Dropout(self.dropout)(x, deterministic=not training)
+
+
+# Sinusoidal alternative (fixed, not learned)
+def sinusoidal_embedding(max_len, d_model):
+    pos = jnp.arange(max_len)[:, None]          # (max_len, 1)
+    i   = jnp.arange(d_model // 2)[None, :]     # (1, d_model/2)
+    angles = pos / (10000 ** (2 * i / d_model))
+    pe = jnp.concatenate([jnp.sin(angles),
+                           jnp.cos(angles)], axis=-1)
+    return pe  # (max_len, d_model)
+</code></pre>`,
+    pytorch: `
+      <pre><code class="language-python">import torch
+import torch.nn as nn
+import math
+
+class Embedding(nn.Module):
+    def __init__(self, vocab_size, d_model, max_len, dropout=0.0):
+        super().__init__()
+        self.tok_emb = nn.Embedding(vocab_size, d_model)
+        self.pos_emb = nn.Embedding(max_len, d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, token_ids):
+        # token_ids: (batch, seq_len)
+        B, T = token_ids.shape
+        positions = torch.arange(T, device=token_ids.device)
+        x = self.tok_emb(token_ids) + self.pos_emb(positions)
+        return self.dropout(x)  # (B, T, d_model)
+
+
+# Sinusoidal alternative (fixed, not learned)
+class SinusoidalEmbedding(nn.Module):
+    def __init__(self, max_len, d_model):
+        super().__init__()
+        pe = torch.zeros(max_len, d_model)
+        pos = torch.arange(max_len).unsqueeze(1).float()
+        div = torch.exp(torch.arange(0, d_model, 2).float()
+                        * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(pos * div)
+        pe[:, 1::2] = torch.cos(pos * div)
+        self.register_buffer('pe', pe)
+
+    def forward(self, token_ids, tok_emb):
+        T = token_ids.size(1)
+        return tok_emb + self.pe[:T]
+</code></pre>`,
+    visualize: `
+      <div class="viz-toggle-bar">
+        <button class="viz-tog active" id="vtog-sin" onclick="setPEMode('sin')">Sinusoidal</button>
+        <button class="viz-tog"        id="vtog-rope" onclick="setPEMode('rope')">RoPE</button>
+      </div>
+
+      <div id="vpane-sin">
+        <p class="viz-note">Each position gets a unique fingerprint of alternating sin/cos values across dimensions. Low-index dimensions oscillate slowly (coarse position); high-index dimensions oscillate fast (fine-grained position). Together they uniquely identify every position.</p>
+        <div class="viz-sublabel">PE matrix — rows: positions 0→60, columns: dimensions 0→128</div>
+        <canvas id="pe-heatmap" width="580" height="180" style="width:100%;border-radius:6px;display:block"></canvas>
+        <div class="viz-colorbar">
+          <div class="colorbar-grad"></div>
+          <div class="colorbar-labels"><span>−1</span><span>0</span><span>+1</span></div>
+        </div>
+        <div class="viz-sublabel" style="margin-top:16px">Sine value vs position — each curve is one dimension index</div>
+        <canvas id="pe-waves" width="580" height="110" style="width:100%;border-radius:6px;display:block;margin-top:4px"></canvas>
+      </div>
+
+      <div id="vpane-rope" style="display:none">
+        <p class="viz-note">RoPE rotates each pair of dimensions by angle θ_k × position. After rotation, the dot product ⟨q_m, k_n⟩ depends only on (m−n) — not on absolute positions. This gives the model relative position awareness without adding to the input.</p>
+        <div class="rope-controls">
+          <span>Key position:</span>
+          <input type="range" id="rope-slider" min="0" max="20" value="5" oninput="updateRopePos(+this.value)">
+          <strong id="rope-pos-display">5</strong>
+          <span class="rope-dim-note">&nbsp;(showing dim pair k=4, θ ≈ 0.316)</span>
+        </div>
+        <div class="rope-panels">
+          <div class="rope-left">
+            <div class="viz-sublabel">Rotation in 2D</div>
+            <canvas id="rope-circle" width="220" height="220" style="border-radius:6px;display:block"></canvas>
+          </div>
+          <div class="rope-right">
+            <div class="viz-sublabel">cos(dist · θ_k) per dimension pair — similarity vs distance</div>
+            <canvas id="rope-decay" width="340" height="220" style="width:100%;border-radius:6px;display:block"></canvas>
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  attn: {
+    title: "Masked Self-Attention",
+    tag: "tag-attn", tagLabel: "Core Mechanism",
+    intuition: `
+      <p>This is the central innovation of the transformer. Before attention, recurrent networks (LSTMs) processed tokens one at a time, left to right, and information about early tokens had to survive a long chain of state updates to influence later tokens. Long-range dependencies were hard to learn.</p>
+      <p>Self-attention solves this by letting <strong>every token directly attend to every other token in a single step</strong>. No matter how far apart two tokens are, their interaction is computed with the same cost as adjacent tokens.</p>
+      <p>The mechanism works through three projections learned from data:</p>
+      <ul>
+        <li><strong>Query (Q)</strong>: "What am I looking for?" — the current token's information need</li>
+        <li><strong>Key (K)</strong>: "What do I contain?" — what each token advertises about itself</li>
+        <li><strong>Value (V)</strong>: "What do I give?" — the actual content to pass on if selected</li>
+      </ul>
+      <p>A token's query is dot-producted with every other token's key. A high dot product means strong relevance — the querying token pulls heavily from that position's value. The result is a weighted sum of all values, where the weights reflect relevance.</p>
+      <p>The <strong>causal mask</strong> is what makes this a decoder: future positions are set to $-\\infty$ before softmax (→ probability 0), so token at position $t$ can only attend to positions $0 \\ldots t$.</p>
+      <p><strong>Multi-head attention</strong> runs $H$ attention operations in parallel, each with its own Q/K/V projections. Different heads learn to focus on different types of relationships — syntax, coreference, proximity, etc. Their outputs are concatenated and projected back to $d_{\\text{model}}$.</p>
+      <div class="attn-viz">
+        <div class="attn-col">
+          <div class="attn-bar" style="height:8px;opacity:0.3"></div>
+          <div class="attn-token">The</div>
+          <div class="attn-label">pos 0</div>
+        </div>
+        <div class="attn-col">
+          <div class="attn-bar" style="height:32px;opacity:0.55"></div>
+          <div class="attn-token">cat</div>
+          <div class="attn-label">pos 1</div>
+        </div>
+        <div class="attn-col">
+          <div class="attn-bar" style="height:56px"></div>
+          <div class="attn-token" style="border-color:#d4a0ff;color:#d4a0ff">sat</div>
+          <div class="attn-label" style="color:#d4a0ff">← query</div>
+        </div>
+        <div class="attn-col">
+          <div class="attn-bar" style="height:12px;opacity:0.15;background:#555"></div>
+          <div class="attn-token" style="opacity:0.3">on</div>
+          <div class="attn-label" style="color:#444">masked</div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem;color:#777;text-align:center;margin-top:-4px">Token "sat" attending to past tokens; future is masked</p>
+    `,
+    math: `
+      <h4>Projections</h4>
+      <div class="math-block">$$Q = XW_Q,\\quad W_Q \\in \\mathbb{R}^{d_{\\text{model}} \\times d_k}$$
+$$K = XW_K,\\quad W_K \\in \\mathbb{R}^{d_{\\text{model}} \\times d_k}$$
+$$V = XW_V,\\quad W_V \\in \\mathbb{R}^{d_{\\text{model}} \\times d_v}$$</div>
+
+      <h4>Scaled Dot-Product Attention</h4>
+      <div class="math-block">$$\\text{Attention}(Q, K, V) = \\text{softmax}\\!\\left(\\frac{QK^\\top}{\\sqrt{d_k}} + M\\right)V$$</div>
+      <p>where the causal mask $M_{ij} = -\\infty$ if $j > i$, else $0$. This zeroes out future positions after softmax.</p>
+
+      <h4>Why $\\sqrt{d_k}$?</h4>
+      <p>If $Q, K \\sim \\mathcal{N}(0, 1)$, then $Q \\cdot K \\sim \\mathcal{N}(0, d_k)$. Variance grows with dimension, pushing softmax into saturation (near-zero gradients). Dividing by $\\sqrt{d_k}$ restores unit variance.</p>
+
+      <h4>Multi-Head Attention</h4>
+      <div class="math-block">$$\\text{head}_h = \\text{Attention}(XW_Q^h,\\ XW_K^h,\\ XW_V^h)$$
+$$\\text{MHA}(X) = \\text{Concat}(\\text{head}_1,\\ \\ldots,\\ \\text{head}_H)\\, W_O$$</div>
+      <p>where $W_O \\in \\mathbb{R}^{Hd_v \\times d_{\\text{model}}}$. Typically $d_k = d_v = d_{\\text{model}} / H$.</p>
+    `,
+    jax: `
+      <pre><code class="language-python">import jax
+import jax.numpy as jnp
+import flax.linen as nn
+
+class CausalSelfAttention(nn.Module):
+    n_heads: int
+    d_model: int
+    dropout: float = 0.0
+
+    @nn.compact
+    def __call__(self, x, training=False):
+        B, T, C = x.shape
+        d_head = C // self.n_heads
+
+        # Single fused projection for Q, K, V
+        qkv = nn.Dense(3 * C, use_bias=False)(x)  # (B, T, 3C)
+        q, k, v = jnp.split(qkv, 3, axis=-1)
+
+        # Reshape to (B, n_heads, T, d_head)
+        def split_heads(t):
+            return t.reshape(B, T, self.n_heads, d_head).transpose(0, 2, 1, 3)
+        q, k, v = split_heads(q), split_heads(k), split_heads(v)
+
+        # Scaled dot-product attention
+        scale = d_head ** -0.5
+        scores = jnp.matmul(q, k.transpose(0, 1, 3, 2)) * scale  # (B,H,T,T)
+
+        # Causal mask: upper triangle = -inf
+        mask = jnp.tril(jnp.ones((T, T), dtype=bool))
+        scores = jnp.where(mask, scores, -1e9)
+
+        weights = jax.nn.softmax(scores, axis=-1)
+        weights = nn.Dropout(self.dropout)(weights, deterministic=not training)
+
+        out = jnp.matmul(weights, v)            # (B, H, T, d_head)
+        out = out.transpose(0, 2, 1, 3).reshape(B, T, C)
+        return nn.Dense(C)(out)                 # output projection
+</code></pre>`,
+    pytorch: `
+      <pre><code class="language-python">import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class CausalSelfAttention(nn.Module):
+    def __init__(self, d_model, n_heads, dropout=0.0):
+        super().__init__()
+        assert d_model % n_heads == 0
+        self.n_heads = n_heads
+        self.d_head  = d_model // n_heads
+        self.qkv  = nn.Linear(d_model, 3 * d_model, bias=False)
+        self.proj = nn.Linear(d_model, d_model)
+        self.attn_drop = nn.Dropout(dropout)
+
+    def forward(self, x):
+        B, T, C = x.shape
+
+        # Fused Q, K, V projection
+        q, k, v = self.qkv(x).split(C, dim=2)
+
+        # Reshape to (B, n_heads, T, d_head)
+        def split_heads(t):
+            return t.view(B, T, self.n_heads, self.d_head).transpose(1, 2)
+        q, k, v = split_heads(q), split_heads(k), split_heads(v)
+
+        # Scaled dot-product with causal mask
+        scores = (q @ k.transpose(-2, -1)) / (self.d_head ** 0.5)
+        causal = torch.tril(torch.ones(T, T, device=x.device, dtype=torch.bool))
+        scores = scores.masked_fill(~causal, float('-inf'))
+        weights = self.attn_drop(F.softmax(scores, dim=-1))
+
+        out = (weights @ v)
+        out = out.transpose(1, 2).contiguous().view(B, T, C)
+        return self.proj(out)
+
+# PyTorch 2.0+ has optimized Flash Attention built in:
+# out = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+</code></pre>`
+  },
+
+  norm1: {
+    title: "Add & Norm (after Attention)",
+    tag: "tag-norm", tagLabel: "Stabilization",
+    intuition: `
+      <p>Two simple operations that make deep networks trainable — without them, stacking many transformer blocks would be nearly impossible due to unstable gradients.</p>
+      <p><strong>Residual connection (Add):</strong> Instead of replacing the input with the attention output, we <em>add</em> the attention output to the original input. This creates a direct highway for gradients to flow backward through the entire network. In a 96-layer model, gradients would otherwise have to survive 96 multiplications, shrinking to near-zero or exploding.</p>
+      <p>There's also a beautiful initialization property: if all the attention weights start near zero, the residual block is a near-identity function — it passes input through unchanged. You can start training a very deep network that initially behaves like a shallow one, and gradually activates its capacity.</p>
+      <p><strong>Layer normalization (Norm):</strong> Normalizes each token's vector to have mean 0 and variance 1 across the feature dimension. This prevents activations from drifting to extreme values as signals propagate through layers.</p>
+      <p>Unlike batch normalization (which normalizes across the batch dimension), layer norm normalizes across features. This makes it work well even for batch size 1, and stable with variable-length sequences.</p>
+      <p>Most modern models (GPT-2+) use <strong>Pre-Norm</strong>: normalize <em>before</em> the sub-layer rather than after. This trains more stably at large scale because gradients at the start of each block are always well-conditioned.</p>
+    `,
+    math: `
+      <h4>Residual Connection</h4>
+      <p>Post-Norm (original paper):</p>
+      <div class="math-block">$$\\mathbf{x} \\leftarrow \\text{LayerNorm}(\\mathbf{x} + \\text{Attention}(\\mathbf{x}))$$</div>
+      <p>Pre-Norm (GPT-2+, LLaMA — now standard):</p>
+      <div class="math-block">$$\\mathbf{x} \\leftarrow \\mathbf{x} + \\text{Attention}(\\text{LayerNorm}(\\mathbf{x}))$$</div>
+
+      <h4>Layer Normalization</h4>
+      <div class="math-block">$$\\mu = \\frac{1}{d}\\sum_{i=1}^d x_i, \\qquad \\sigma^2 = \\frac{1}{d}\\sum_{i=1}^d (x_i - \\mu)^2$$
+$$\\text{LayerNorm}(\\mathbf{x}) = \\gamma \\odot \\frac{\\mathbf{x} - \\mu}{\\sqrt{\\sigma^2 + \\varepsilon}} + \\beta$$</div>
+      <p>where $\\gamma, \\beta \\in \\mathbb{R}^d$ are learned scale and shift, and $\\varepsilon \\approx 10^{-5}$ ensures numerical stability.</p>
+
+      <h4>RMSNorm (LLaMA, Mistral)</h4>
+      <p>Drops mean-centering for speed — works just as well in practice:</p>
+      <div class="math-block">$$\\text{RMSNorm}(\\mathbf{x}) = \\frac{\\mathbf{x}}{\\text{RMS}(\\mathbf{x})} \\odot \\gamma, \\qquad \\text{RMS}(\\mathbf{x}) = \\sqrt{\\frac{1}{d}\\sum_i x_i^2 + \\varepsilon}$$</div>
+    `,
+    jax: `
+      <pre><code class="language-python">import jax.numpy as jnp
+import flax.linen as nn
+
+class AddNorm(nn.Module):
+    """Pre-norm residual block (modern standard)."""
+    epsilon: float = 1e-6
+
+    @nn.compact
+    def __call__(self, x, sublayer):
+        # Normalize first, then apply sublayer, then add residual
+        return x + sublayer(nn.LayerNorm(epsilon=self.epsilon)(x))
+
+
+# RMSNorm — used by LLaMA, Mistral
+class RMSNorm(nn.Module):
+    epsilon: float = 1e-6
+
+    @nn.compact
+    def __call__(self, x):
+        scale = self.param('scale', nn.initializers.ones, (x.shape[-1],))
+        rms = jnp.sqrt(jnp.mean(x ** 2, axis=-1, keepdims=True) + self.epsilon)
+        return x / rms * scale
+
+
+# Usage inside a transformer block:
+class TransformerBlock(nn.Module):
+    n_heads: int
+    d_model: int
+
+    @nn.compact
+    def __call__(self, x, training=False):
+        attn = CausalSelfAttention(self.n_heads, self.d_model)
+        ffn  = FFN(self.d_model)
+        x = x + attn(nn.LayerNorm()(x), training=training)
+        x = x + ffn(nn.LayerNorm()(x))
+        return x
+</code></pre>`,
+    pytorch: `
+      <pre><code class="language-python">import torch.nn as nn
+
+class TransformerBlock(nn.Module):
+    """Pre-norm transformer block (GPT-2 style)."""
+    def __init__(self, d_model, n_heads, dropout=0.0):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(d_model)
+        self.attn  = CausalSelfAttention(d_model, n_heads, dropout)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.ffn   = FFN(d_model)
+
+    def forward(self, x):
+        x = x + self.attn(self.norm1(x))   # pre-norm attention + residual
+        x = x + self.ffn(self.norm2(x))    # pre-norm FFN + residual
+        return x
+
+
+# RMSNorm — used by LLaMA, Mistral (faster than LayerNorm)
+class RMSNorm(nn.Module):
+    def __init__(self, d_model, eps=1e-6):
+        super().__init__()
+        self.eps   = eps
+        self.scale = nn.Parameter(torch.ones(d_model))
+
+    def forward(self, x):
+        rms = x.pow(2).mean(-1, keepdim=True).add(self.eps).rsqrt()
+        return x * rms * self.scale
+
+# PyTorch 2.4+ also has: nn.RMSNorm(d_model)
+</code></pre>`
+  },
+
+  norm2: {
+    title: "Add & Norm (after FFN)",
+    tag: "tag-norm", tagLabel: "Stabilization",
+    intuition: `
+      <p>The same residual + layer norm pattern used after attention is repeated after the FFN. This is the second of two residual paths in each transformer block.</p>
+      <p>The consistent doubling of this pattern — one for attention, one for FFN — is what allows transformers to be trained to extreme depths (GPT-3 has 96 layers, and some research models go much deeper).</p>
+      <p>A useful mental model: think of each transformer block as learning a <strong>correction</strong> to the current representation, not a complete rewrite. The residual connection means: "here's the original signal, now add whatever small adjustment is useful." The layer norm ensures that adjustment is well-scaled before being added back.</p>
+      <p>If a block's learned weights were all zeroed out, the residual connections would pass the input through unchanged — the block is a safe no-op at initialization. This means you can initialize a very deep model as if it were a shallow one, and let training gradually activate depth.</p>
+    `,
+    math: `
+      <h4>Full Transformer Block (Pre-Norm)</h4>
+      <div class="math-block">$$\\mathbf{x} \\leftarrow \\mathbf{x} + \\text{Attn}(\\text{LN}(\\mathbf{x}))$$
+$$\\mathbf{x} \\leftarrow \\mathbf{x} + \\text{FFN}(\\text{LN}(\\mathbf{x}))$$</div>
+      <p>Input and output shapes are identical: $\\mathbf{x} \\in \\mathbb{R}^{T \\times d_{\\text{model}}}$. Blocks can be stacked arbitrarily.</p>
+
+      <h4>Residual as Gradient Highway</h4>
+      <p>Through $N$ blocks, the gradient of the loss with respect to the input is:</p>
+      <div class="math-block">$$\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{x}_0} = \\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{x}_N} \\cdot \\prod_{i=1}^N \\left(1 + \\frac{\\partial f_i}{\\partial \\mathbf{x}_i}\\right)$$</div>
+      <p>The $+1$ term from each residual prevents the gradient product from vanishing to zero, even across many layers.</p>
+    `,
+    jax: `
+      <pre><code class="language-python">import flax.linen as nn
+
+class TransformerBlock(nn.Module):
+    n_heads: int
+    d_model: int
+    dropout: float = 0.0
+
+    @nn.compact
+    def __call__(self, x, training=False):
+        # --- Attention sub-layer ---
+        residual = x
+        x = nn.LayerNorm()(x)
+        x = CausalSelfAttention(self.n_heads, self.d_model, self.dropout)(
+            x, training=training
+        )
+        x = residual + x   # Add (residual)
+
+        # --- FFN sub-layer ---
+        residual = x
+        x = nn.LayerNorm()(x)
+        x = FFN(self.d_model)(x)
+        x = residual + x   # Add (residual)
+
+        return x
+</code></pre>`,
+    pytorch: `
+      <pre><code class="language-python">import torch.nn as nn
+
+class TransformerBlock(nn.Module):
+    def __init__(self, d_model, n_heads, dropout=0.0):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(d_model)
+        self.attn  = CausalSelfAttention(d_model, n_heads, dropout)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.ffn   = FFN(d_model)
+        self.drop  = nn.Dropout(dropout)
+
+    def forward(self, x):
+        # Attention sub-layer
+        x = x + self.drop(self.attn(self.norm1(x)))
+
+        # FFN sub-layer
+        x = x + self.drop(self.ffn(self.norm2(x)))
+
+        return x
+</code></pre>`
+  },
+
+  ffn: {
+    title: "Feed-Forward Network",
+    tag: "tag-ffn", tagLabel: "Per-Token Processing",
+    intuition: `
+      <p>After attention has gathered context from other tokens, each token's vector has been updated with information from its neighbors. The FFN is where the model actually <strong>processes and transforms</strong> that information.</p>
+      <p>Unlike attention (which mixes information across positions), the FFN is applied <strong>identically and independently</strong> to each token position. There's no communication between positions here — it's a pure per-vector transformation.</p>
+      <p>Why expand and contract? The 4× expansion creates a wider intermediate space where the model can separate and recombine features in complex ways. GELU introduces nonlinearity — without it, stacked linear layers would collapse to a single linear transformation.</p>
+      <p>There's a compelling theory that FFN layers act as a <strong>key-value memory store</strong> (Geva et al., 2021). Each neuron in the first layer acts as a "key" pattern — it fires when the input matches a certain concept. The corresponding row in the second layer acts as the "value" — the information to retrieve when that key fires. This is where much of the model's factual knowledge is thought to be stored.</p>
+      <p>Models like LLaMA use <strong>SwiGLU</strong> instead of GELU, which adds a gating mechanism: a third weight matrix learns to modulate the activation, improving expressiveness for the same parameter count.</p>
+    `,
+    math: `
+      <h4>Standard FFN (GPT-2)</h4>
+      <div class="math-block">$$\\text{FFN}(\\mathbf{x}) = W_2 \\cdot \\text{GELU}(W_1 \\mathbf{x} + b_1) + b_2$$</div>
+      <p>where $W_1 \\in \\mathbb{R}^{d \\times 4d}$ expands and $W_2 \\in \\mathbb{R}^{4d \\times d}$ contracts.</p>
+
+      <h4>GELU Activation</h4>
+      <div class="math-block">$$\\text{GELU}(x) = x \\cdot \\Phi(x)$$</div>
+      <p>where $\\Phi$ is the standard Gaussian CDF. Practical approximation:</p>
+      <div class="math-block">$$\\text{GELU}(x) \\approx \\tfrac{1}{2}x\\!\\left(1 + \\tanh\\!\\left(\\sqrt{\\tfrac{2}{\\pi}}\\,(x + 0.044715\\, x^3)\\right)\\right)$$</div>
+
+      <h4>SwiGLU (LLaMA, PaLM)</h4>
+      <div class="math-block">$$\\text{FFN}_{\\text{SwiGLU}}(\\mathbf{x}) = \\big(W_1\\mathbf{x} \\odot \\text{SiLU}(W_3\\mathbf{x})\\big)\\, W_2$$</div>
+      <p>where $\\text{SiLU}(x) = x \\cdot \\sigma(x)$. Uses hidden dim $\\approx \\tfrac{8}{3}d$ to match the parameter count of a standard $4\\times$ FFN.</p>
+    `,
+    jax: `
+      <pre><code class="language-python">import jax.numpy as jnp
+import flax.linen as nn
+
+class FFN(nn.Module):
+    d_model: int
+    expansion: int = 4
+    dropout: float = 0.0
+
+    @nn.compact
+    def __call__(self, x, training=False):
+        x = nn.Dense(self.d_model * self.expansion)(x)
+        x = nn.gelu(x)
+        x = nn.Dropout(self.dropout)(x, deterministic=not training)
+        x = nn.Dense(self.d_model)(x)
+        return x
+
+
+# SwiGLU variant (LLaMA-style)
+class SwiGLUFFN(nn.Module):
+    d_model: int
+    hidden_dim: int = None
+
+    @nn.compact
+    def __call__(self, x):
+        hidden = self.hidden_dim or int(self.d_model * 8 / 3)
+        gate = nn.Dense(hidden, use_bias=False)(x)
+        val  = nn.Dense(hidden, use_bias=False)(x)
+        x = nn.silu(gate) * val
+        return nn.Dense(self.d_model, use_bias=False)(x)
+</code></pre>`,
+    pytorch: `
+      <pre><code class="language-python">import torch.nn as nn
+import torch.nn.functional as F
+
+class FFN(nn.Module):
+    def __init__(self, d_model, expansion=4, dropout=0.0):
+        super().__init__()
+        hidden = d_model * expansion
+        self.fc1  = nn.Linear(d_model, hidden)
+        self.fc2  = nn.Linear(hidden, d_model)
+        self.drop = nn.Dropout(dropout)
+
+    def forward(self, x):
+        return self.fc2(self.drop(F.gelu(self.fc1(x))))
+
+
+# SwiGLU variant (LLaMA-style)
+class SwiGLUFFN(nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        hidden = int(d_model * 8 / 3)  # ~same params as 4x FFN
+        self.gate = nn.Linear(d_model, hidden, bias=False)
+        self.val  = nn.Linear(d_model, hidden, bias=False)
+        self.proj = nn.Linear(hidden, d_model, bias=False)
+
+    def forward(self, x):
+        return self.proj(F.silu(self.gate(x)) * self.val(x))
+</code></pre>`
+  },
+
+  output: {
+    title: "Linear Projection (Output Head)",
+    tag: "tag-output", tagLabel: "Output",
+    intuition: `
+      <p>After passing through all $N$ transformer blocks, each token position holds a rich contextual vector. For next-token prediction, we care about the vector at the <strong>last token position</strong> — it has attended to everything that came before.</p>
+      <p>This vector lives in $d_{\\text{model}}$-dimensional space. But we need a score for every possible next token in the vocabulary. That requires a linear projection from $d_{\\text{model}} \\to |\\mathcal{V}|$ — producing one number (logit) per vocabulary entry.</p>
+      <p>A higher logit for a token means the model assigns higher probability to that token being next. These logits are raw and unbounded — softmax in the next step normalizes them into actual probabilities.</p>
+      <p>An important trick used in virtually all modern models: <strong>weight tying</strong>. The output projection matrix $W_{\\text{out}}$ is set to be exactly the token embedding matrix $E$ transposed. If a token's embedding vector points in a certain direction in the representation space, then the output logit for that token should be high when the hidden state points in the same direction. It also reduces parameters significantly — at $|\\mathcal{V}|=50$k and $d_{\\text{model}}=768$, $W_{\\text{out}}$ would be 38M parameters. Weight tying frees all of those for no cost in quality.</p>
+    `,
+    math: `
+      <h4>Output Projection</h4>
+      <div class="math-block">$$\\text{logits} = W_{\\text{out}}\\, \\mathbf{h}_{\\text{last}}, \\qquad W_{\\text{out}} \\in \\mathbb{R}^{|\\mathcal{V}| \\times d_{\\text{model}}}$$</div>
+
+      <h4>Weight Tying</h4>
+      <p>Standard practice: $W_{\\text{out}} = E^\\top$ where $E$ is the token embedding matrix. The logit for token $t$ becomes the dot product of the hidden state with token $t$'s embedding:</p>
+      <div class="math-block">$$\\text{logit}_t = \\mathbf{h}_{\\text{last}} \\cdot E[t]$$</div>
+      <p>Tokens whose embeddings align with the current hidden state get high logits. Reduces parameters by $|\\mathcal{V}| \\times d_{\\text{model}}$ at no quality cost.</p>
+
+      <h4>Training Objective (Cross-Entropy)</h4>
+      <p>At each position $t$, predict the next token $x_{t+1}$:</p>
+      <div class="math-block">$$\\mathcal{L} = -\\frac{1}{T}\\sum_{t=1}^{T} \\log P(x_{t+1} \\mid x_1, \\ldots, x_t)$$</div>
+    `,
+    jax: `
+      <pre><code class="language-python">import jax.numpy as jnp
+import flax.linen as nn
+import optax
+
+class OutputHead(nn.Module):
+    vocab_size: int
+
+    @nn.compact
+    def __call__(self, x, embedding_matrix=None):
+        if embedding_matrix is not None:
+            # Weight tying: reuse embedding matrix transposed
+            logits = x @ embedding_matrix.T  # (B, T, vocab_size)
+        else:
+            logits = nn.Dense(self.vocab_size, use_bias=False)(x)
+        return logits  # (B, T, vocab_size)
+
+
+# Training loss
+def compute_loss(logits, targets):
+    # logits: (B, T, vocab_size)
+    # targets: (B, T) — shift input by 1 to get next tokens
+    B, T, V = logits.shape
+    logits_flat  = logits[:, :-1].reshape(-1, V)
+    targets_flat = targets[:, 1:].reshape(-1)
+    return optax.softmax_cross_entropy_with_integer_labels(
+        logits_flat, targets_flat
+    ).mean()
+</code></pre>`,
+    pytorch: `
+      <pre><code class="language-python">import torch.nn as nn
+import torch.nn.functional as F
+
+class OutputHead(nn.Module):
+    def __init__(self, d_model, vocab_size):
+        super().__init__()
+        self.proj = nn.Linear(d_model, vocab_size, bias=False)
+
+    def forward(self, x):
+        return self.proj(x)  # (B, T, vocab_size)
+
+
+# Weight tying (call after both modules are initialized)
+def tie_weights(model):
+    model.output_head.proj.weight = model.embedding.tok_emb.weight
+
+
+# Training loss
+def compute_loss(logits, targets):
+    # logits:  (B, T, vocab_size)
+    # targets: (B, T) — next token ids (input shifted by 1)
+    B, T, V = logits.shape
+    logits_flat  = logits[:, :-1].reshape(-1, V)
+    targets_flat = targets[:, 1:].reshape(-1)
+    return F.cross_entropy(logits_flat, targets_flat)
+</code></pre>`
+  },
+
+  softmax: {
+    title: "Softmax + Sampling",
+    tag: "tag-softmax", tagLabel: "Generation",
+    intuition: `
+      <p>The output logits are raw scores — they can be any real number. Softmax converts them into a proper probability distribution: all values positive, summing to 1.</p>
+      <p>Once we have probabilities, we need to pick the next token. There are several strategies, each with different tradeoffs between quality and diversity:</p>
+      <ul>
+        <li><strong>Greedy</strong>: always pick the single highest-probability token. Fast, deterministic, but often repetitive — the model gets stuck in loops.</li>
+        <li><strong>Temperature sampling</strong>: divide logits by $T$ before softmax. $T < 1$ sharpens the distribution (more predictable), $T > 1$ flattens it (more creative, more random). Temperature is the primary knob for controlling generation style.</li>
+        <li><strong>Top-k</strong>: zero out all tokens except the $k$ most probable, then sample. Prevents the model from picking very low-probability nonsense tokens.</li>
+        <li><strong>Top-p (nucleus sampling)</strong>: include the smallest set of tokens whose cumulative probability exceeds $p$. Adapts — when the model is confident, the nucleus is small; when uncertain, it's larger.</li>
+      </ul>
+      <p>After picking a token, it's appended to the input sequence and the entire forward pass runs again. This is <strong>autoregressive generation</strong> — one token at a time, until an end-of-sequence token or max length is reached.</p>
+      <p>This is also why <strong>KV caching</strong> matters: re-running the full forward pass for each token is expensive, but the K/V computations for past tokens don't change. Caching them avoids $O(T^2)$ redundant computation during long generations.</p>
+      <div class="flow-dots"><div class="flow-dot"></div><div class="flow-dot"></div><div class="flow-dot"></div></div>
+      <p style="text-align:center;font-size:0.78rem;color:#777">token → append → repeat until &lt;eos&gt;</p>
+    `,
+    math: `
+      <h4>Softmax</h4>
+      <div class="math-block">$$P(\\text{token}_i) = \\frac{\\exp(\\ell_i)}{\\displaystyle\\sum_j \\exp(\\ell_j)}$$</div>
+
+      <h4>Temperature Scaling</h4>
+      <div class="math-block">$$P_T(\\text{token}_i) = \\frac{\\exp(\\ell_i / T)}{\\displaystyle\\sum_j \\exp(\\ell_j / T)}$$</div>
+      <p>$T \\to 0$: greedy (argmax). $\\;T = 1$: standard sampling. $\\;T \\to \\infty$: uniform distribution.</p>
+
+      <h4>Top-$k$ Sampling</h4>
+      <div class="math-block">$$\\mathcal{S}_k = \\{\\text{indices of } k \\text{ largest } \\ell_i\\}$$
+$$\\ell_i \\leftarrow \\begin{cases} \\ell_i & i \\in \\mathcal{S}_k \\\\ -\\infty & i \\notin \\mathcal{S}_k \\end{cases}$$</div>
+
+      <h4>Top-$p$ (Nucleus) Sampling</h4>
+      <div class="math-block">$$\\mathcal{S}_p = \\text{smallest set s.t. } \\sum_{i \\in \\mathcal{S}_p} P(\\text{token}_i) \\geq p$$</div>
+
+      <h4>Autoregressive Factorization</h4>
+      <div class="math-block">$$P(x_1, \\ldots, x_T) = \\prod_{t=1}^T P(x_t \\mid x_1, \\ldots, x_{t-1})$$</div>
+    `,
+    jax: `
+      <pre><code class="language-python">import jax
+import jax.numpy as jnp
+import functools
+
+def sample_next_token(logits, key, temperature=1.0, top_k=None, top_p=None):
+    """
+    logits: (vocab_size,) — output of linear projection
+    key:    JAX random key
+    """
+    logits = logits / temperature
+
+    if top_k is not None:
+        top_k_val = jnp.sort(logits)[-top_k]
+        logits = jnp.where(logits >= top_k_val, logits, -jnp.inf)
+
+    if top_p is not None:
+        probs_sorted = jnp.sort(jax.nn.softmax(logits))[::-1]
+        cumsum = jnp.cumsum(probs_sorted)
+        cutoff = probs_sorted[jnp.searchsorted(cumsum, top_p)]
+        probs = jax.nn.softmax(logits)
+        logits = jnp.where(probs >= cutoff, logits, -jnp.inf)
+
+    return jax.random.categorical(key, logits)
+
+
+@functools.partial(jax.jit, static_argnames=('max_new_tokens',))
+def generate(params, model, prompt_ids, max_new_tokens, key, **kwargs):
+    ids = prompt_ids
+    for _ in range(max_new_tokens):
+        key, subkey = jax.random.split(key)
+        logits = model.apply(params, ids)     # (T, vocab_size)
+        next_id = sample_next_token(logits[-1], subkey, **kwargs)
+        ids = jnp.append(ids, next_id)
+    return ids
+</code></pre>`,
+    pytorch: `
+      <pre><code class="language-python">import torch
+import torch.nn.functional as F
+
+def sample_next_token(logits, temperature=1.0, top_k=None, top_p=None):
+    """logits: (vocab_size,) for the last position"""
+    logits = logits / temperature
+
+    if top_k is not None:
+        v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+        logits[logits < v[-1]] = float('-inf')
+
+    if top_p is not None:
+        sorted_logits, sorted_idx = torch.sort(logits, descending=True)
+        cum_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+        remove = cum_probs - F.softmax(sorted_logits, dim=-1) > top_p
+        sorted_logits[remove] = float('-inf')
+        logits.scatter_(0, sorted_idx, sorted_logits)
+
+    probs = F.softmax(logits, dim=-1)
+    return torch.multinomial(probs, num_samples=1).item()
+
+
+@torch.no_grad()
+def generate(model, prompt_ids, max_new_tokens, **kwargs):
+    ids = prompt_ids.clone()  # (1, T)
+    for _ in range(max_new_tokens):
+        logits = model(ids)           # (1, T, vocab_size)
+        next_id = sample_next_token(logits[0, -1], **kwargs)
+        ids = torch.cat([ids, torch.tensor([[next_id]])], dim=1)
+    return ids
+</code></pre>`
+  }
+};
+
+let activeId = null;
+let activeTab = 'intuition';
+
+function show(id) {
+  if (activeId) {
+    document.getElementById('blk-' + activeId)?.classList.remove('active');
+    if (activeId === 'norm1' || activeId === 'norm2') {
+      document.getElementById('blk-norm1').classList.remove('active');
+      document.getElementById('blk-norm2').classList.remove('active');
+    }
+  }
+  activeId = id;
+  document.getElementById('blk-' + id)?.classList.add('active');
+  if (id === 'norm1' || id === 'norm2') {
+    document.getElementById('blk-norm1').classList.add('active');
+    document.getElementById('blk-norm2').classList.add('active');
+  }
+  renderCard(id, activeTab);
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  if (activeId) renderCard(activeId, tab);
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+}
+
+function renderCard(id, tab) {
+  const d = descriptions[id];
+  const card = document.getElementById('desc-card');
+  const hasViz = !!d.visualize;
+
+  // If switching to 'visualize' on a block that has none, fall back
+  if (tab === 'visualize' && !hasViz) tab = activeTab = 'intuition';
+
+  const vizBtn = hasViz
+    ? `<button class="tab-btn ${tab==='visualize'?'active':''}" data-tab="visualize" onclick="switchTab('visualize')">Visualize</button>`
+    : '';
+
+  const tabsHtml = `
+    <div class="tab-bar">
+      <button class="tab-btn ${tab==='intuition'?'active':''}" data-tab="intuition" onclick="switchTab('intuition')">Intuition</button>
+      <button class="tab-btn ${tab==='math'     ?'active':''}" data-tab="math"      onclick="switchTab('math')">Math</button>
+      <button class="tab-btn ${tab==='jax'      ?'active':''}" data-tab="jax"       onclick="switchTab('jax')">JAX / Flax<span class="tab-code-label">code</span></button>
+      <button class="tab-btn ${tab==='pytorch'  ?'active':''}" data-tab="pytorch"   onclick="switchTab('pytorch')">PyTorch<span class="tab-code-label">code</span></button>
+      ${vizBtn}
+    </div>
+  `;
+
+  const contentMap = {
+    intuition: `<div class="intuition">${d.intuition}</div>`,
+    math:      `<div class="math-section">${d.math}</div>`,
+    jax:       `<div class="code-pane">${d.jax}</div>`,
+    pytorch:   `<div class="code-pane">${d.pytorch}</div>`,
+    visualize: d.visualize || '',
+  };
+
+  card.innerHTML = `
+    ${tabsHtml}
+    <div class="card-header">
+      <div class="desc-title">${d.title}</div>
+      <span class="tag ${d.tag}">${d.tagLabel}</span>
+    </div>
+    <div class="tab-content">${contentMap[tab]}</div>
+  `;
+
+  card.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+
+  if (tab === 'math') {
+    renderMathInElement(card.querySelector('.tab-content'), {
+      delimiters: [
+        { left: '$$', right: '$$', display: true  },
+        { left: '$',  right: '$',  display: false },
+      ],
+      throwOnError: false
+    });
+  }
+
+  if (tab === 'visualize') setTimeout(initViz, 30);
+
+  card.classList.remove('animating');
+  void card.offsetWidth;
+  card.classList.add('animating');
+}
+
+// ---- VISUALIZATION STATE & FUNCTIONS ----
+
+let peMode = 'sin';
+let ropePos = 5;
+
+function setPEMode(mode) {
+  peMode = mode;
+  document.getElementById('vpane-sin').style.display  = mode === 'sin'  ? 'block' : 'none';
+  document.getElementById('vpane-rope').style.display = mode === 'rope' ? 'block' : 'none';
+  document.getElementById('vtog-sin').classList.toggle('active',  mode === 'sin');
+  document.getElementById('vtog-rope').classList.toggle('active', mode === 'rope');
+  setTimeout(initViz, 10);
+}
+
+function updateRopePos(val) {
+  ropePos = val;
+  document.getElementById('rope-pos-display').textContent = val;
+  drawRopeCircle();
+  drawRopeDecay();
+}
+
+function initViz() {
+  if (peMode === 'sin') { drawSinHeatmap(); drawSinWaves(); }
+  else                  { drawRopeCircle(); drawRopeDecay(); }
+}
+
+function peColor(val) {
+  // -1 → blue, 0 → near-black, +1 → orange
+  const t = (val + 1) / 2;
+  if (t < 0.5) {
+    const s = t * 2;
+    return `rgb(${Math.round(20+s*15)},${Math.round(25+s*15)},${Math.round(120-s*70)})`;
+  } else {
+    const s = (t - 0.5) * 2;
+    return `rgb(${Math.round(35+s*165)},${Math.round(40+s*65)},${Math.round(50-s*30)})`;
+  }
+}
+
+function drawSinHeatmap() {
+  const canvas = document.getElementById('pe-heatmap');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const maxPos = 60, dModel = 128;
+  const cw = W / dModel, ch = H / maxPos;
+  for (let pos = 0; pos < maxPos; pos++) {
+    for (let i = 0; i < dModel; i++) {
+      const d2 = i % 2 === 0 ? i : i - 1;
+      const val = i % 2 === 0
+        ? Math.sin(pos / Math.pow(10000, d2 / dModel))
+        : Math.cos(pos / Math.pow(10000, d2 / dModel));
+      ctx.fillStyle = peColor(val);
+      ctx.fillRect(Math.floor(i * cw), Math.floor(pos * ch), Math.ceil(cw) + 1, Math.ceil(ch) + 1);
+    }
+  }
+  // Axis labels
+  ctx.fillStyle = '#555'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('dimension →', W / 2, H - 3);
+  ctx.save(); ctx.translate(8, H / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText('position →', 0, 0); ctx.restore();
+}
+
+function drawSinWaves() {
+  const canvas = document.getElementById('pe-waves');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  const maxPos = 100, dModel = 128;
+  const series = [
+    { d: 0,   color: '#d4a0ff', label: 'd=0'   },
+    { d: 8,   color: '#80c8ff', label: 'd=8'   },
+    { d: 24,  color: '#80ffb0', label: 'd=24'  },
+    { d: 56,  color: '#ffd080', label: 'd=56'  },
+    { d: 120, color: '#ff9090', label: 'd=120' },
+  ];
+  ctx.strokeStyle = '#1e1e28'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W - 60, H/2); ctx.stroke();
+  series.forEach(({ d: dim, color, label }, idx) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let p = 0; p <= maxPos; p++) {
+      const val = Math.sin(p / Math.pow(10000, dim / dModel));
+      const x = (p / maxPos) * (W - 64);
+      const y = H / 2 - val * (H / 2 - 6);
+      p === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = color; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+    ctx.fillText(label, W - 58, 12 + idx * 17);
+  });
+  ctx.fillStyle = '#444'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('position →', (W - 64) / 2, H - 2);
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color, lw) {
+  const a = Math.atan2(y2 - y1, x2 - x1), hl = 8;
+  ctx.strokeStyle = color; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.fillStyle = color; ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - hl * Math.cos(a - 0.4), y2 - hl * Math.sin(a - 0.4));
+  ctx.lineTo(x2 - hl * Math.cos(a + 0.4), y2 - hl * Math.sin(a + 0.4));
+  ctx.closePath(); ctx.fill();
+}
+
+function drawRopeCircle() {
+  const canvas = document.getElementById('rope-circle');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2, r = W * 0.36;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  // Grid
+  ctx.strokeStyle = '#1a1f2a'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  // Unit circle
+  ctx.strokeStyle = '#252b3a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  // theta for dim pair k=4 in 64-dim model: theta = 1/10000^(8/64) ≈ 0.316
+  const theta = 1 / Math.pow(10000, 8 / 64);
+  const angle = ropePos * theta;
+  // Angle arc
+  if (angle > 0.02) {
+    ctx.strokeStyle = 'rgba(255,208,80,0.35)'; ctx.lineWidth = 12;
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.28, 0, angle, false); ctx.stroke();
+  }
+  // Query vector (pos=0, points right)
+  drawArrow(ctx, cx, cy, cx + r, cy, '#80ffe0', 2.5);
+  ctx.fillStyle = '#80ffe0'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+  ctx.fillText('q  pos=0', cx + r + 4, cy - 6);
+  // Key vector (pos=ropePos, rotated CCW in math = up-left in canvas)
+  const kx = cx + r * Math.cos(angle);
+  const ky = cy - r * Math.sin(angle);
+  drawArrow(ctx, cx, cy, kx, ky, '#d4a0ff', 2.5);
+  ctx.fillStyle = '#d4a0ff'; ctx.font = '10px monospace';
+  const tx = kx > cx ? kx + 4 : kx - 72, ty = ky < cy ? ky - 8 : ky + 16;
+  ctx.textAlign = 'left';
+  ctx.fillText(`k  pos=${ropePos}`, tx, ty);
+  // Dot product
+  ctx.fillStyle = '#ffd080'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(`cos(${ropePos}·θ) = ${Math.cos(angle).toFixed(3)}`, cx, H - 8);
+}
+
+function drawRopeDecay() {
+  const canvas = document.getElementById('rope-decay');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  const maxDist = 50, dModel = 64;
+  const pad = { l: 26, r: 78, t: 12, b: 22 };
+  const pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+  const y0 = pad.t + ph / 2;
+  // Grid lines
+  ctx.strokeStyle = '#1a1f28'; ctx.lineWidth = 1;
+  [[1, pad.t], [0, y0], [-1, pad.t + ph]].forEach(([, y]) => {
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+  });
+  // Current position marker
+  const mx = pad.l + (ropePos / maxDist) * pw;
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(mx, pad.t); ctx.lineTo(mx, pad.t + ph); ctx.stroke();
+  ctx.setLineDash([]);
+  const series = [
+    { k: 0,  color: '#d4a0ff', label: 'k=0'  },
+    { k: 4,  color: '#80c8ff', label: 'k=4'  },
+    { k: 12, color: '#80ffb0', label: 'k=12' },
+    { k: 28, color: '#ffd080', label: 'k=28' },
+  ];
+  series.forEach(({ k, color, label }) => {
+    const theta = 1 / Math.pow(10000, 2 * k / dModel);
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let dist = 0; dist <= maxDist; dist++) {
+      const val = Math.cos(dist * theta);
+      const x = pad.l + (dist / maxDist) * pw;
+      const y = y0 - val * (ph / 2) * 0.88;
+      dist === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    const fv = Math.cos(maxDist * theta);
+    const fy = y0 - fv * (ph / 2) * 0.88;
+    ctx.fillStyle = color; ctx.font = '9px monospace'; ctx.textAlign = 'left';
+    ctx.fillText(label, W - pad.r + 5, Math.max(pad.t + 7, Math.min(pad.t + ph, fy + 4)));
+  });
+  // Y-axis labels
+  ctx.fillStyle = '#555'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+  ctx.fillText('1', pad.l - 3, pad.t + 5);
+  ctx.fillText('0', pad.l - 3, y0 + 4);
+  ctx.fillText('-1', pad.l - 3, pad.t + ph + 4);
+  ctx.fillStyle = '#555'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('position distance →', pad.l + pw / 2, H - 3);
+}
+
+show('attn');
+</script>
+</body>
+</html>
